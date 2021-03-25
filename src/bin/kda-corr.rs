@@ -7,11 +7,12 @@ use std::io;
 //use std::io::BufRead;
 use std::string::String;
 use nalgebra::base::DMatrix;
+use nalgebra::DVector;
 
 /**
  * Takes a long sequence of kda stats (see kda-stretch), and computes correlations
  */
-fn main() -> Result<(),i32> {
+fn main() -> Result<(),String> {
 
     //helper variables (not used in optimization)
     let mut offset = 0;
@@ -20,17 +21,18 @@ fn main() -> Result<(),i32> {
 
     //optimization varaibles read in
     let mut item_columns: HashMap<String,usize> = HashMap::new();
-    let mut column_names: HashMap<usize,String> = HashMap::new();
+    let mut row_names: HashMap<usize,String> = HashMap::new();
     let mut data_entries: HashMap<(usize,usize),f32> = HashMap::new();
     //size of the state:
     let mut row_max=0;
 
     //more, the target functions
     let mut output_b: HashMap<usize,f32> = HashMap::new();
-    let mut output_kd: HashMap<usize,f32> = HashMap::new();
-    let mut output_ad: HashMap<usize,f32> = HashMap::new();
+    let mut output_k: HashMap<usize,f32> = HashMap::new();
+    let mut output_a: HashMap<usize,f32> = HashMap::new();
+    let mut output_d: HashMap<usize,f32> = HashMap::new();
 
-    column_names.insert(0,"Time".to_string());
+    row_names.insert(0,"Time".to_string());
     item_columns.insert("Time".to_string(),0);
 
     for input_line in io::stdin().lock().lines()
@@ -85,19 +87,17 @@ fn main() -> Result<(),i32> {
          */
         //filter out the output variables:
         if key=="D" {
-            let ad_spread_ptr = output_ad.entry(row_idx).or_insert(0.0);
-            *ad_spread_ptr = *ad_spread_ptr - 1.0;
-            let kd_spread_ptr = output_kd.entry(row_idx).or_insert(0.0);
-            *kd_spread_ptr= *kd_spread_ptr - 1.0;
+            let d_ptr = output_d.entry(row_idx).or_insert(0.0);
+            *d_ptr = *d_ptr + 1.0;
         } else if key=="A" {
-            let ad_spread_ptr = output_ad.entry(row_idx).or_insert(0.0);
-            *ad_spread_ptr = *ad_spread_ptr + 1.0;
+            let a_ptr = output_a.entry(row_idx).or_insert(0.0);
+            *a_ptr = *a_ptr + 1.0;
         } else if key=="K" {
-            let kd_spread_ptr = output_kd.entry(row_idx).or_insert(0.0);
-            *kd_spread_ptr= *kd_spread_ptr + 1.0;
+            let k_ptr = output_k.entry(row_idx).or_insert(0.0);
+            *k_ptr= *k_ptr + 1.0;
         } else if key=="B" {
-            let b_spread_ptr = output_b.entry(row_idx).or_insert(0.0);
-            *b_spread_ptr= *b_spread_ptr + 1.0;
+            let b_ptr = output_b.entry(row_idx).or_insert(0.0);
+            *b_ptr= *b_ptr + 1.0;
         } else {
             let time = row_idx  as f32;
             //process as input variable
@@ -106,7 +106,7 @@ fn main() -> Result<(),i32> {
             let col_idx = *item_columns.entry(key.to_string()).or_insert(cur_size);
 
             //save the name for later output
-            column_names.insert(col_idx,key.to_string());
+            row_names.insert(col_idx,key.to_string());
 
             //insert a 1 (or +=1) the row/column.
             let current_value = data_entries.entry((row_idx,col_idx)).or_insert(0.0);
@@ -116,20 +116,24 @@ fn main() -> Result<(),i32> {
             *current_value=*current_value + 1.0;
 
             //and finally, add the element for time
-            data_entries.insert((row_idx,0),time);
+            data_entries.insert((  row_idx  ,0), (time+0.1).ln() );
             processed_lines+=1;
         }
     }
     let cur_size = item_columns.len();
     eprintln!("Processed {} lines, read: {} rows and {} variables",processed_lines, row_max,cur_size);
     //well this is nice. Might as well rename "from_fn" to "for fun":
-    let factor_matrix =  DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(-1.0) );
-    let _x_ad =          DMatrix::<f32>::from_fn(row_max,1, |i,_| * output_ad.entry(i).or_insert(0.0) );
-    let _x_kd =          DMatrix::<f32>::from_fn(row_max,1, |i,_| * output_kd.entry(i).or_insert(0.0) );
-    let x_b  =           DMatrix::<f32>::from_fn(row_max,1, |i,_| * output_b.entry(i).or_insert(0.0) );
+    let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(0.0) );
+    let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * output_k.entry(i).or_insert(0.0) );
+    let x_d =          DVector::<f32>::from_fn(row_max, |i,_| * output_d.entry(i).or_insert(0.0) );
+    let x_a =          DVector::<f32>::from_fn(row_max, |i,_| * output_a.entry(i).or_insert(0.0) );
+    let x_b =          DVector::<f32>::from_fn(row_max, |i,_| * output_b.entry(i).or_insert(0.0) );
     //ok, do some math to find how much each one contributed to the result (I think)
-
-    println!("{}",factor_matrix);
+    let mut x_all = DMatrix::<f32>::zeros(row_max,4);
+    x_all.set_column(0,&x_k);
+    x_all.set_column(1,&x_d);
+    x_all.set_column(3,&x_a);
+    x_all.set_column(2,&x_b);
 
     //this is silly, why can't Matrix implement copy?
     //Create a bunch of copies manually for later operations
@@ -138,26 +142,41 @@ fn main() -> Result<(),i32> {
     factor_matrix.transpose_to(&mut ft);
     ft.transpose_to(&mut f);
 
-    //math time!
     let factor_square = ft * f;
-    //println!("{} {}",factor_square,x_b);
     let lu_decom_factor = factor_square.lu();
-    println!("{}",lu_decom_factor.is_invertible());
-    let ftx_b = factor_matrix.transpose() * x_b;
-    //println!("{}",ftx_b);
-    for (col,name) in column_names{
-        eprintln!("{} is {}",col,name);
-    }
+    let ftx_all = factor_matrix.transpose() * x_all;
 
-    let weighting_b = match lu_decom_factor.solve( &ftx_b ) 
+    println!("Solving :");
+    let weighting = match lu_decom_factor.solve( & ftx_all) 
     {
         Some(weights)=>weights,
         None=>{
-            eprintln!("Couldn't solve for w_b");
-            DMatrix::zeros(1,1)
+            eprintln!("Couldn't solve for W");
+            return Err("Could not solve for W".to_string());
         },
     };
-    println!("{}",weighting_b);
+    eprintln!("{}",weighting);
+    let mut mat_ptr = weighting.iter();
+    let cur_size = ftx_all.nrows();
+    let default_value = "??".to_string();
+
+    //we should call next() 4*cur_size times.
+    eprintln!("{:>15}:{:>6}{:>6}{:>6}{:>6}","Weight","K","D","A","B");
+    for idx in 0..cur_size {
+        let row_name = row_names.get(&idx).unwrap_or_else(|| &default_value);
+        eprint!("{:>15}:",row_name);
+        for _ in 0..4{
+            let weight = match mat_ptr.next() {
+                None=>0.0,
+                Some(w)=>*w,
+            };
+            let pretty_string = format!("{:0.2}",weight);
+            eprint!("{:>6}",pretty_string);
+        }
+
+        eprintln!("");
+    }
+    assert_eq!(mat_ptr.next(),None);
     //done:
     Ok(())
 }
