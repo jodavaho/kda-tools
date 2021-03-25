@@ -1,14 +1,14 @@
 //use std::collections::HashMap;
+use std::io::Write;
+use std::io::{stdin,stdout};
 use std::io::BufRead;
-use std::io;
 //use std::fs::File;
 //use std::path::Path;
-//use std::io::BufRead;
 use std::string::String;
 
 fn main() {
     let mut line_count = 0;
-    for input_line in io::stdin().lock().lines()
+    for input_line in stdin().lock().lines()
     {
         let line:String = match input_line
         {
@@ -22,7 +22,7 @@ fn main() {
             None=>continue,
         };
         for tok in tok_iter{
-            println!("{} {} {}",line_count,indexer,tok);
+            writeln!(stdout(),"{} {} {}",line_count,indexer,tok).unwrap_or(());
         }
         line_count+=1;
     }
