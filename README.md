@@ -1,3 +1,17 @@
+This tool will correlate your equipment choices with your KDA spreads.
+
+# What?
+
+I play [hunt showdown](https://www.huntshowdown.com/) a lot. It's very fun. It's also insanely frustrating sometimes. The game has long matches, very frantic, quick battles, and a wide variey of meaningful character specialization and equipment options. It can take dozens of matches to determine if a loadout is worth it, and there are many loadouts, and a match takes an hour ... In short, it *is very hard to get feedback on what equipment loadouts, tactics, or friends are useful*.
+
+For that, I keep a journal of matches, and am writing this tool to output some insights on the data gathered.
+
+To use it, you *will* have to write down match information. But matches last an hour, so that's not much overhead. Then, you'll have to use the two tools this provides:
+
+-  `kda-stretch` will stretch out the data in your journal into a stream. This is useful for piping into other programs or your own analysis. Use it like this: `cat journal.txt | kda-stretch` or `<journal.txt kda-stretch`.
+-  `kda-corr` the alpha (unstable, unreliable) version of some multi-variate regression that will tell you how well the KDAB spreads you're seeing are explained by your choices in equipment and friends.
+
+
 # Basics
 
 Keep a match journal like this:
