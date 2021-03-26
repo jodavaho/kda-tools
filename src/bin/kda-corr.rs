@@ -23,47 +23,51 @@ fn main() -> Result<(),String> {
     let mut item_columns: HashMap<String,usize> = HashMap::new();
     let mut row_names: HashMap<usize,String> = HashMap::new();
     let mut data_entries: HashMap<(usize,usize),f32> = HashMap::new();
+    
     //size of the state:
     let mut row_max=0;
 
     //more, the target functions
-    let mut output_b: HashMap<usize,f32> = HashMap::new();
-    let mut output_k: HashMap<usize,f32> = HashMap::new();
-    let mut output_a: HashMap<usize,f32> = HashMap::new();
-    let mut output_d: HashMap<usize,f32> = HashMap::new();
+    let mut b_out: HashMap<usize,f32> = HashMap::new();
+    let mut k_out: HashMap<usize,f32> = HashMap::new();
+    let mut a_out: HashMap<usize,f32> = HashMap::new();
+    let mut d_out: HashMap<usize,f32> = HashMap::new();
 
     row_names.insert(0,"Time".to_string());
     item_columns.insert("Time".to_string(),0);
 
-    for input_line in io::stdin().lock().lines()
+    let local_sin = io::stdin();
+    let mut line_itr = local_sin.lock().lines();
+    while let Some(line_read) = line_itr.next()
     {
+        let line = line_read.unwrap_or("".to_string());
         line_count+=1;
-        let line:String = match input_line
-        {
-            Ok(line)=>line,
-            Err(_)=>continue,
-        };
         let mut tok_iter = line.split_whitespace();
-        let row_str = match tok_iter.next()
+        let row_txt = match tok_iter.next()
         {
-            Some(tok)=>tok,
             None=>continue,
+            Some(s)=>s,
         };
-        let row_idx:usize =  match row_str.parse::<usize>()
+        let input_row_number = match row_txt.parse::<usize>()
         {
             Ok(i)=>i,
             Err(e)=>{
-                eprintln!("Line {} not a row #:{} (see kda-stretch) Error={}",line_count,row_str,e);
+                eprintln!("Line {} not a row #:{} (see kda-stretch) Error={}",line_count,row_txt,e);
                 continue
             },
         };
-        if row_idx==0  && offset==0
+        if input_row_number==0  && offset==0
         {
             eprintln!("Found zero-indexed row, assuming offset=1");
             offset=1;
-
         }
-        let _ignore_this = match tok_iter.next()
+        let row_idx = input_row_number - 1 + offset; 
+
+        //tally up the "size" of the state ... allowing the user
+        //to force us to assume zeros if they skip state indecies
+        row_max = max(row_max,input_row_number);
+
+        let key = match tok_iter.next()
         {
             Some(tok)=>tok,
             None=>{
@@ -71,7 +75,7 @@ fn main() -> Result<(),String> {
                 continue;
             },
         };
-        let key = match tok_iter.next()
+        let val = match tok_iter.next()
         {
             Some(tok)=>tok,
             None=>{
@@ -85,49 +89,71 @@ fn main() -> Result<(),String> {
          * That is, we're constructing a sparse matrix / vector for each things we're trying to solve. 
          * Later, after I learn how to use DMatrix in ~30 lines, I'll just put it into DMatrix.
          */
-        //filter out the output variables:
-        if key=="D" {
-            let d_ptr = output_d.entry(row_idx).or_insert(0.0);
-            *d_ptr = *d_ptr + 1.0;
-        } else if key=="A" {
-            let a_ptr = output_a.entry(row_idx).or_insert(0.0);
-            *a_ptr = *a_ptr + 1.0;
-        } else if key=="K" {
-            let k_ptr = output_k.entry(row_idx).or_insert(0.0);
-            *k_ptr= *k_ptr + 1.0;
-        } else if key=="B" {
-            let b_ptr = output_b.entry(row_idx).or_insert(0.0);
-            *b_ptr= *b_ptr + 1.0;
-        } else {
-            let time = row_idx  as f32;
-            //process as input variable
-            //tally the column name
-            let cur_size:usize = item_columns.len();
-            let col_idx = *item_columns.entry(key.to_string()).or_insert(cur_size);
+         if key=="Date"{
+             continue;
+         }
+         //all other keys have float values
+         let fval = match val.parse::<f32>()
+         {
+             Err(e)=>{
+                 eprintln!("Error: Cannot get a float/int value from: {} on line {} -- {}. Skipping",val,line,e);
+                 continue;
+             },
+             Ok(f)=>f,
+         };
+         match key{
+            "K"=>{
+                let k_ptr = k_out.entry(row_idx).or_insert(0.0);
+                *k_ptr = *k_ptr + fval;
+            },
+            "D"=>{
+                let d_ptr = d_out.entry(row_idx).or_insert(0.0);
+                *d_ptr = *d_ptr + fval;
+            },
+            "A"=>{
+                let a_ptr = a_out.entry(row_idx).or_insert(0.0);
+                *a_ptr = *a_ptr + fval;
+            },
+            "B"=>{
+                let b_ptr = b_out.entry(row_idx).or_insert(0.0);
+                *b_ptr = *b_ptr + fval;
+            },
+            _ => {
+                let time = row_idx  as f32;
+                //process as input variable We're building a matrix F with
+                //columns = the state rows retrieve the column name (Or
+                //initialize new column), which confusingly correpsonds to the
+                //row name. This is cause we assume KDAB = W * X.
+                let cur_size:usize = item_columns.len();
+                let col_idx = *item_columns.entry(key.to_string()).or_insert(cur_size);
 
-            //save the name for later output
-            row_names.insert(col_idx,key.to_string());
+                //save the name for later output
+                row_names.insert(col_idx,key.to_string());
 
-            //insert a 1 (or +=1) the row/column.
-            let current_value = data_entries.entry((row_idx,col_idx)).or_insert(0.0);
+                //insert a 1 (or +=1) the row/column. We're doing present / not present.
+                let current_value = data_entries.entry((row_idx,col_idx)).or_insert(0.0);
+                *current_value=*current_value + 1.0;
 
-            //tally up the state size
-            row_max = max(row_max,row_idx+offset);
-            *current_value=*current_value + 1.0;
-
-            //and finally, add the element for time
-            data_entries.insert((  row_idx  ,0), (time+0.1).ln() );
-            processed_lines+=1;
+                //and finally, add the element for time
+                //It's ok to do this many times, and we will, since there are many of the same row_index values 
+                // on many lines (see kda-stretch)
+                data_entries.insert((  row_idx  ,0), (time+0.1).ln() );
+                processed_lines+=1;
+            }
         }
     }
     let cur_size = item_columns.len();
     eprintln!("Processed {} lines, read: {} rows and {} variables",processed_lines, row_max,cur_size);
+    for i in 0..row_names.len(){
+        eprint!(" {} ",row_names.entry(i).or_insert("??".to_string()));
+    }
+    eprintln!("");
     //well this is nice. Might as well rename "from_fn" to "for fun":
     let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(0.0) );
-    let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * output_k.entry(i).or_insert(0.0) );
-    let x_d =          DVector::<f32>::from_fn(row_max, |i,_| * output_d.entry(i).or_insert(0.0) );
-    let x_a =          DVector::<f32>::from_fn(row_max, |i,_| * output_a.entry(i).or_insert(0.0) );
-    let x_b =          DVector::<f32>::from_fn(row_max, |i,_| * output_b.entry(i).or_insert(0.0) );
+    let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * k_out.entry(i).or_insert(0.0) );
+    let x_d =          DVector::<f32>::from_fn(row_max, |i,_| * d_out.entry(i).or_insert(0.0) );
+    let x_a =          DVector::<f32>::from_fn(row_max, |i,_| * a_out.entry(i).or_insert(0.0) );
+    let x_b =          DVector::<f32>::from_fn(row_max, |i,_| * b_out.entry(i).or_insert(0.0) );
     //ok, do some math to find how much each one contributed to the result (I think)
     let mut x_all = DMatrix::<f32>::zeros(row_max,4);
     x_all.set_column(0,&x_k);
@@ -151,7 +177,6 @@ fn main() -> Result<(),String> {
     {
         Some(weights)=>weights,
         None=>{
-            eprintln!("Couldn't solve for W");
             return Err("Could not solve for W".to_string());
         },
     };
