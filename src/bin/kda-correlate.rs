@@ -1,3 +1,4 @@
+extern crate thislib;
 use std::collections::HashMap;
 use std::cmp::max;
 use std::io::BufRead;
@@ -33,6 +34,9 @@ fn main() -> Result<(),String> {
     let mut a_out: HashMap<usize,f32> = HashMap::new();
     let mut d_out: HashMap<usize,f32> = HashMap::new();
 
+    row_names.insert(0,"Time".to_string());
+    item_columns.insert("Time".to_string(),0);
+
     let local_sin = io::stdin();
     let mut line_itr = local_sin.lock().lines();
 
@@ -64,7 +68,7 @@ fn main() -> Result<(),String> {
             eprintln!("Found zero-indexed row, assuming offset=1");
             offset=1;
         }
-        let row_idx = input_row_number -1 + offset; 
+        let row_idx = input_row_number + offset; 
 
         //tally up the "size" of the state ... allowing the user
         //to force us to assume zeros if they skip state indecies
@@ -104,6 +108,8 @@ fn main() -> Result<(),String> {
              },
              Ok(f)=>f,
          };
+         //we don't touch zero-th entry
+         assert!(row_idx>0);
          match key{
             "K"=>{
                 let k_ptr = k_out.entry(row_idx).or_insert(0.0);
@@ -122,6 +128,7 @@ fn main() -> Result<(),String> {
                 *b_ptr = *b_ptr + fval;
             },
             _ => {
+                let time = row_idx  as f32;
                 //process as input variable We're building a matrix F with
                 //columns = the state rows retrieve the column name (Or
                 //initialize new column), which confusingly correpsonds to the
@@ -136,6 +143,10 @@ fn main() -> Result<(),String> {
                 let current_value = data_entries.entry((row_idx,col_idx)).or_insert(0.0);
                 *current_value=1.0;
 
+                //and finally, add the element for time
+                //It's ok to do this many times, and we will, since there are many of the same row_index values 
+                // on many lines (see kda-stretch)
+                data_entries.insert((  row_idx  ,0), time );
                 processed_lines+=1;
             }
         }
@@ -143,13 +154,18 @@ fn main() -> Result<(),String> {
 
     let cur_size = item_columns.len();
 
+    //now add penalty row
+    for col in 0..cur_size{
+        data_entries.insert( (0,col)  , 1.0);
+    }
+
     eprintln!("Processed {} lines, read: {} rows and {} variables",processed_lines, row_max,cur_size);
     for i in 0..row_names.len(){
         eprint!(" {} ",row_names.entry(i).or_insert("??".to_string()));
     }
     eprintln!("");
     //well this is nice. Might as well rename "from_fn" to "for fun":
-    let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(0.0) );
+    let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(-1.0) );
 
     let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * k_out.entry(i).or_insert(0.0) );
     let x_d =          DVector::<f32>::from_fn(row_max, |i,_| * d_out.entry(i).or_insert(0.0) );
@@ -162,72 +178,47 @@ fn main() -> Result<(),String> {
     x_all.set_column(2,&x_a);
     x_all.set_column(3,&x_b);
 
-    let kd_spread = x_k.clone() - x_d.clone();
-    let kda_spread = (x_k.clone() + x_a.clone()) - x_d.clone();
+    //this is silly, why can't Matrix implement copy?
+    //Create a bunch of copies manually for later operations
+    let mut ft = DMatrix::zeros(cur_size,row_max);
+    let mut f = DMatrix::zeros(row_max,cur_size);
+    factor_matrix.transpose_to(&mut ft);
+    ft.transpose_to(&mut f);
 
-    // calculate baseline mKDA
-    let kdab_sum = x_all.row_sum();
-    let kdab_mean = x_all.row_mean();
-    let kdab_var = x_all.row_variance();
-    let kds_mean = kd_spread.row_mean();
-    let kds_var = kd_spread.row_variance();
-    let kdsa_mean = kda_spread.row_mean();
-    let kdsa_var = kda_spread.row_variance();
+    let factor_square = ft * f;
+    let lu_decom_factor = factor_square.lu();
+    let ftx_all = factor_matrix.transpose() * x_all;
 
-    //we want -1 sigma and +1 sigma for all of: Baseline and all equipment
-
-    //summ up kdab for each factor:
-    let factor_specific_kdab = factor_matrix.transpose() * x_all;
-    let factor_counts = factor_matrix.row_sum().transpose();
-    let mut repeat_factor_counts = DMatrix::<f32>::zeros(cur_size,4);
-    for i in 0..4{
-        repeat_factor_counts.set_column(i,&factor_counts);
-    }
-    //I wonder what 0/0 is around here
-    let factor_means = factor_specific_kdab.component_div(&repeat_factor_counts);
-
-    //all right, all that so we can get sums and means for everything. 
-    //how to get variances ... 
-
-    //create factor-sized matrix of means
-
-    //this will be just like factor_matrix, but will have (i,j)==> match i had j Kills.
-    //we're doing this only for kills right now. (0th column in factor_means)
-
-    /*
-    let factor_divisors = DMatrix::<f32>::from_fn( cur_size,cur_size, 
-        |i,_| 
-        factor_counts.get(i).unwrap() / row_max  as f32
-    );
-    */
-    //sample covariance divisor is N-1 for all elements of the cov matrix
-
-    /* 
-     * NOTE: IN WHAT FOLLOWS 0 --> Kills. We need tomake it easier to use 0..4
-     * for KDAB
-     */
-    let factor_divisors = DMatrix::<f32>::from_fn( cur_size,cur_size, 
-        |i,j| 
-        *factor_counts.get(i).unwrap()
-    );
-    let factor_multiplicands = DMatrix::<f32>::from_fn ( 
-        row_max,cur_size,
-        |i,j| 
-        factor_matrix.get( (i,j) ).unwrap()  * ( x_k.get( i ).unwrap() - factor_means.get( (j,0) ).unwrap())
-    );
-
-    eprintln!("means{}",factor_means);
-    eprintln!("FMPLCANDS:{}",factor_multiplicands);
-    eprintln!("divisor:{}",factor_divisors);
-    let factor_covariance = (factor_multiplicands.transpose() * factor_multiplicands).component_div(&factor_divisors);
-    eprintln!("kill variances{}",factor_covariance);
-
-    //let's print kill spread per item.
-    eprintln!("{:>10} {:>2.2} +/-  {:>2.2}", "ALL", kdab_mean.get(0).unwrap(), kdab_var.get(0).unwrap().sqrt());
-    for i in 0..cur_size
+    println!("Solving :");
+    let weighting = match lu_decom_factor.solve( & ftx_all) 
     {
-        eprintln!("{:>10} {:>2.2} +/-  {:>2.2}", row_names.entry(i).or_insert("??".to_string()),  factor_means.get( (i,0 )).unwrap(), factor_covariance.get( (i,i) ).unwrap().sqrt());
-    }
+        Some(weights)=>weights,
+        None=>{
+            return Err("Could not solve for W".to_string());
+        },
+    };
+    eprintln!("{}",weighting);
+    let mut mat_ptr = weighting.iter();
+    let cur_size = ftx_all.nrows();
+    let default_value = "??".to_string();
 
+    //we should call next() 4*cur_size times.
+    eprintln!("{:>15}:{:>6}{:>6}{:>6}{:>6}","Weight","K","D","A","B");
+    for idx in 0..cur_size {
+        let row_name = row_names.get(&idx).unwrap_or_else(|| &default_value);
+        eprint!("{:>15}:",row_name);
+        for _ in 0..4{
+            let weight = match mat_ptr.next() {
+                None=>0.0,
+                Some(w)=>*w,
+            };
+            let pretty_string = format!("{:0.2}",weight);
+            eprint!("{:>6}",pretty_string);
+        }
+
+        eprintln!("");
+    }
+    assert_eq!(mat_ptr.next(),None);
+    //done:
     Ok(())
 }
