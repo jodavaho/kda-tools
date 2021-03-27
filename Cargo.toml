@@ -6,6 +6,7 @@ description = "Toosl for doing data management on a match journal, specifally fo
 edition = "2018"
 readme= "README.md"
 license-file = "LICENSE"
+homepage = "https://github.com/jodavaho/kda-tools"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
