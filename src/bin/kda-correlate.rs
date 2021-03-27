@@ -1,4 +1,3 @@
-extern crate thislib;
 use std::collections::HashMap;
 use std::cmp::max;
 use std::io::BufRead;

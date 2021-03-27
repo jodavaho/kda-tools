@@ -13,3 +13,4 @@ license-file = "LICENSE"
 [dependencies]
 regex="1.4.0"
 nalgebra="0.25.0"
+kvc="0.1.0"
