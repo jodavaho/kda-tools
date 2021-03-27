@@ -6,7 +6,9 @@ I play [hunt showdown](https://www.huntshowdown.com/) a lot. It's very fun. It's
 
 For that, I keep a journal of matches, and am writing this tool to output some insights on the data gathered.
 
-To use it, you *will* have to write down match information. But matches last an hour, so that's not much overhead. Then, you'll have to use the two tools this provides:
+To use it, you *will* have to write down match information. But matches last an hour, so that's not much overhead. 
+
+Then, you'll have to use the tools this package provides:
 
 -  `kda-stretch` will stretch out the data in your journal into a stream. This is useful for piping into other programs or your own analysis. Use it like this: `cat journal.txt | kda-stretch` or `<journal.txt kda-stretch`.
 -  `kda-corr` the alpha (unstable, unreliable) version of some multi-variate regression that will tell you how well the KDAB spreads you're seeing are explained by your choices in equipment and friends.
@@ -14,7 +16,7 @@ To use it, you *will* have to write down match information. But matches last an 
 
 # Basics
 
-Keep a match journal like this:
+Keep a match journal like this (fyi this is [key value count format](https://github.com/jodavaho/kvc) ).
 
 ```
 <date> [<items or friends initials>] [K|D|A|B]
@@ -51,7 +53,7 @@ a hat trick of kills w/ John on wed, and a death and assist the following day.
 Then, we can try out this data:
 
 ```
-< journal.txt | kda-stretch | kda-corr
+< journal.txt  kvc-stretch | kda-corr
 ```
 
 The output is something like:

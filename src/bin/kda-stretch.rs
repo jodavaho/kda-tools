@@ -4,8 +4,13 @@ use std::io::Write;
 use std::io::{stdin,stdout};
 use std::io::BufRead;
 use std::string::String;
+extern crate kda_tools;
 
 fn main() {
+
+    eprintln!("kda-tools version:{}",kda_tools::version::version());
+    eprintln!("Using kvc version:{}",kvc::version());
+
     //we're humans here, we speak in Natural Numbers, you wouldn't understand, Borg.
     let mut line_count = 1;  
     let sin = stdin();
