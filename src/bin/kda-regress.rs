@@ -38,6 +38,12 @@ fn main() -> Result<(),String> {
 
     let local_sin = io::stdin();
     let mut line_itr = local_sin.lock().lines();
+
+    k_out.insert(0,0.0);
+    d_out.insert(0,0.0);
+    a_out.insert(0,0.0);
+    b_out.insert(0,0.0);
+
     while let Some(line_read) = line_itr.next()
     {
         let line = line_read.unwrap_or("".to_string());
@@ -61,7 +67,7 @@ fn main() -> Result<(),String> {
             eprintln!("Found zero-indexed row, assuming offset=1");
             offset=1;
         }
-        let row_idx = input_row_number - 1 + offset; 
+        let row_idx = input_row_number + offset; 
 
         //tally up the "size" of the state ... allowing the user
         //to force us to assume zeros if they skip state indecies
@@ -101,6 +107,8 @@ fn main() -> Result<(),String> {
              },
              Ok(f)=>f,
          };
+         //we don't touch zero-th entry
+         assert!(row_idx>0);
          match key{
             "K"=>{
                 let k_ptr = k_out.entry(row_idx).or_insert(0.0);
@@ -132,34 +140,42 @@ fn main() -> Result<(),String> {
 
                 //insert a 1 (or +=1) the row/column. We're doing present / not present.
                 let current_value = data_entries.entry((row_idx,col_idx)).or_insert(0.0);
-                *current_value=*current_value + 1.0;
+                *current_value=1.0;
 
                 //and finally, add the element for time
                 //It's ok to do this many times, and we will, since there are many of the same row_index values 
                 // on many lines (see kda-stretch)
-                data_entries.insert((  row_idx  ,0), (time+0.1).ln() );
+                data_entries.insert((  row_idx  ,0), time );
                 processed_lines+=1;
             }
         }
     }
+
     let cur_size = item_columns.len();
+
+    //now add penalty row
+    for col in 0..cur_size{
+        data_entries.insert( (0,col)  , 1.0);
+    }
+
     eprintln!("Processed {} lines, read: {} rows and {} variables",processed_lines, row_max,cur_size);
     for i in 0..row_names.len(){
         eprint!(" {} ",row_names.entry(i).or_insert("??".to_string()));
     }
     eprintln!("");
     //well this is nice. Might as well rename "from_fn" to "for fun":
-    let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(0.0) );
-    let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * k_out.entry(i).or_insert(0.0) );
+    let factor_matrix =DMatrix::<f32>::from_fn(row_max,cur_size, |i,j| *data_entries.entry((i,j)).or_insert(-1.0) );
+
+    let x_k =          DVector::<f32>::from_fn(row_max, |i,_| * k_out.entry(i).or_insert(0.0) - *d_out.entry(i).or_insert(0.0));
     let x_d =          DVector::<f32>::from_fn(row_max, |i,_| * d_out.entry(i).or_insert(0.0) );
-    let x_a =          DVector::<f32>::from_fn(row_max, |i,_| * a_out.entry(i).or_insert(0.0) );
+    let x_a =          DVector::<f32>::from_fn(row_max, |i,_| * a_out.entry(i).or_insert(0.0) - *d_out.entry(i).or_insert(0.0));
     let x_b =          DVector::<f32>::from_fn(row_max, |i,_| * b_out.entry(i).or_insert(0.0) );
     //ok, do some math to find how much each one contributed to the result (I think)
     let mut x_all = DMatrix::<f32>::zeros(row_max,4);
     x_all.set_column(0,&x_k);
     x_all.set_column(1,&x_d);
-    x_all.set_column(3,&x_a);
-    x_all.set_column(2,&x_b);
+    x_all.set_column(2,&x_a);
+    x_all.set_column(3,&x_b);
 
     //this is silly, why can't Matrix implement copy?
     //Create a bunch of copies manually for later operations

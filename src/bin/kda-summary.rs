@@ -42,11 +42,11 @@ fn main() {
     header+=&std::format!("{:>5} ","sA");
     header+=&std::format!("{:>5} ","sB");
 
+    header+=&std::format!("{:>5} ","mKDA");
     header+=&std::format!("{:>5} ","mK");
     header+=&std::format!("{:>5} ","mD");
     header+=&std::format!("{:>5} ","mA");
     header+=&std::format!("{:>5} ","mB");
-    header+=&std::format!("{:>5} ","mKDA");
 
     writeln!(stdout(),"{}",header).unwrap_or(());
 
