@@ -1,4 +1,4 @@
-use crate::io::stdin;
+
 use std::f32;
 use std::io::BufRead;
 use std::io;
@@ -21,7 +21,7 @@ fn main() -> Result<(),String> {
     let local_sin = io::stdin();
     let line_itr = local_sin.lock().lines();
 
-    let (num_rows,mut kdab_entries,mut data_entries,mut col_to_name,name_to_col) = 
+    let (num_rows,mut kdab_entries,mut data_entries,mut col_to_name,_name_to_col) = 
     kda_tools::helpers::load_from_stream(line_itr);
 
     let num_vars = col_to_name.len();//# variables

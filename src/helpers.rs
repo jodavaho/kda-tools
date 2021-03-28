@@ -1,5 +1,4 @@
 extern crate regex;
-use regex::Regex;
 use std::collections::HashMap;
 use std::io::Lines;
 use std::io::BufRead;
