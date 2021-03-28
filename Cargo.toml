@@ -15,4 +15,4 @@ homepage = "https://github.com/jodavaho/kda-tools"
 regex="1.4.0"
 nalgebra="0.25.0"
 #kvc="0.1.0"
-kvc = {path="../kvc"}
+kvc = "0.2.1"
