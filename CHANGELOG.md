@@ -1,6 +1,7 @@
 # Unreleased (Main Branch)
 
 - Broke out lots of common code to use [kvc crate](https://crates.io/crates/kvc)
+- Fixed kda-correlate to output reasonable things now
 
 # Version 0.1.1
 
