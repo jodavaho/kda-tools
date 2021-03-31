@@ -1,65 +1,18 @@
-extern crate regex;
-use std::collections::HashMap;
-use std::io::Lines;
-use std::io::BufRead;
 
-pub fn load_from_stream<B:BufRead>( lines_input:Lines<B>)-> (
-    usize, //n rows
-    HashMap<(usize,usize),f32> , //kdab_entries
-    HashMap<(usize,usize),f32> , // data_entries
-    HashMap<usize,String>, //col_to_name
-    HashMap<String,usize> //name_to_col
+use nalgebra::DMatrix;
+
+pub fn select_columns(A:DMatrix<f32>, cols: Vec<usize>)
+->
+(   
+    DMatrix<f32>,
+    DMatrix<f32>
 )
 {
-    let mut rows = 0;
-    let mut col_to_name: HashMap<usize,String> = HashMap::new();
-    let mut name_to_col: HashMap<String,usize> = HashMap::new();
-    let mut data_entries: HashMap<(usize,usize),f32> = HashMap::new();
-    let mut kdab_entries: HashMap<(usize,usize),f32> = HashMap::new();
+    let mut A1 = DMatrix::<f32>::zeros(1,1);
+    let mut A2 = DMatrix::<f32>::zeros(1,1);
 
-    let keywords = kvc::get_reserved_matchers();
-    for line_res in lines_input{
-        let line = match line_res{
-            Ok(l)=>l,
-            Err(_)=>"".to_string(),
-        };
-        eprintln!("{}",line);
-        let (key_counts,_)=kvc::read_kvc_line(&line,&keywords);
-        if key_counts.len()> 0
-        {
-            rows+=1;
-            for (key,count) in key_counts{
-                match &key[..]{
-                    "K"=> {
-                        let cur_count_ref = kdab_entries.entry( (rows,0)).or_insert(0.0);
-                        *cur_count_ref = *cur_count_ref + count;
-                    },
-                    "D"=> {
-                        let cur_count_ref = kdab_entries.entry( (rows,1)).or_insert(0.0);
-                        *cur_count_ref = *cur_count_ref + count;
-                    },
-                    "A"=> {
-                        let cur_count_ref = kdab_entries.entry( (rows,2)).or_insert(0.0);
-                        *cur_count_ref = *cur_count_ref + count;
-                    },
-                    "B"=> {
-                        let cur_count_ref = kdab_entries.entry( (rows,3)).or_insert(0.0);
-                        *cur_count_ref = *cur_count_ref + count;
-                    },
-                    _ => {
-                        let colsize = name_to_col.len();
-                        let colidx = name_to_col.entry(key.to_string()).or_insert(colsize);
-                        col_to_name.insert(*colidx,key.to_string());
-                        let cur_count_ref = data_entries.entry( (rows,*colidx)).or_insert(0.0);
-                        *cur_count_ref = *cur_count_ref + count;
-                    }
-                }
-            }
-        }
-    }
-    return (rows,kdab_entries,data_entries,col_to_name,name_to_col);
+    (A1,A2)
 }
-
 pub fn print_nicely(name:String,mean:f32,stdd:f32,char_max:i32,min_val:f32,max_val:f32)
 {
     eprint!("{:>20} {:>4} +/-  {:<4} |", 

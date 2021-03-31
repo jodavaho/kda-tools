@@ -1,4 +1,5 @@
 //use std::collections::HashMap;
+use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdin,stdout};
 use std::io::BufRead;
@@ -58,13 +59,21 @@ fn main() {
             //At this point, we should be dumping the last data, which happens at the end.
         };
 
-        let (keycounts,mut reserved_pairs)=kvc::read_kvc_line(&line, &keywords);
-        if keycounts.len()==0 {
+        let (keycounts,reserved_pairs)=kvc::read_kvc_line(&line, &keywords);
+        if keycounts.len()==0 && reserved_pairs.len()==0 {
             //these are not the lines we're looking for
             continue;
         }
         index+=1;
-        let date_string = reserved_pairs.entry("Date".to_string()).or_insert(index.to_string()).to_string();
+        let mut reserved_lookup: HashMap<String,String>  = HashMap::new();
+        for (key,value) in reserved_pairs{
+            reserved_lookup.insert(key,value);
+        }
+        let date_string = match reserved_lookup.get("Date")
+        {
+            None=>index.to_string(),
+            Some(s)=>s.clone(),
+        };
         //Now, let's read in the k,v pairs for the continuing (or recently initialized) frame
         //Clear line buffer so we can repopulate. This could be done with just carrying forward integers and changing
         //the wrineln! to process_and_write(those integers) ... but nah.

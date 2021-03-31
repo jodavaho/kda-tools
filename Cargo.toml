@@ -14,5 +14,6 @@ homepage = "https://github.com/jodavaho/kda-tools"
 [dependencies]
 regex="1.4.0"
 nalgebra="0.25.0"
-#kvc="0.1.0"
-kvc = "0.2.1"
+kvc = "0.4.0"
+clap ="2.33.0"
+GSL = "4.0.0"
