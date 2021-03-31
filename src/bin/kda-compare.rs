@@ -8,7 +8,6 @@ use std::collections::{HashMap,HashSet};
 use std::f32;
 use std::io::{Write,stdin,stdout,BufRead};
 use std::string::String;
-use rgsl::randist::poisson::poisson_P;
 
 
 /**
@@ -92,21 +91,20 @@ fn main() -> Result<(),String> {
 
 
     for out_experiment in ins{
-        let mut relevant_matches: Vec<usize>=Vec::new();
-        if out_experiment == "_"
-        {
-            eprintln!("Comparing to all!");
-            relevant_matches= (0..num_matches).collect();
-        } else {
-
-            //what column of the data corresponds to the  interesting one?
-            eprintln!("Fetching: {}",out_experiment);
-            let data_idx = *idx_lookup.get(&out_experiment[..]).unwrap();
-            //for which matches did that interesting event occur?
-            relevant_matches= data_lookup.clone().into_iter()
-                .filter(| ((_,idx),value) |  *value>0.0 && *idx==data_idx )
-                .map(| ((time,_),_) | time ).collect::<Vec<_>>();
-        }
+        let relevant_matches = match &out_experiment[..]{
+            "_"=> {
+                (0..num_matches).collect::<Vec<_>>()
+            },
+            _=>{
+                //what column of the data corresponds to the  interesting one?
+                eprintln!("Fetching: {}",out_experiment);
+                let data_idx = *idx_lookup.get(&out_experiment[..]).unwrap();
+                //for which matches did that interesting event occur?
+                data_lookup.clone().into_iter()
+                    .filter(| ((_,idx),value) |  *value>0.0 && *idx==data_idx )
+                    .map(| ((time,_),_) | time ).collect::<Vec<_>>()
+            },
+        }; 
         let relevant_len = relevant_matches.len();
         let out_len = out_idxs.len();
 

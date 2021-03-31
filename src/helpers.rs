@@ -1,18 +1,5 @@
 
-use nalgebra::DMatrix;
 
-pub fn select_columns(A:DMatrix<f32>, cols: Vec<usize>)
-->
-(   
-    DMatrix<f32>,
-    DMatrix<f32>
-)
-{
-    let mut A1 = DMatrix::<f32>::zeros(1,1);
-    let mut A2 = DMatrix::<f32>::zeros(1,1);
-
-    (A1,A2)
-}
 pub fn print_nicely(name:String,mean:f32,stdd:f32,char_max:i32,min_val:f32,max_val:f32)
 {
     eprint!("{:>20} {:>4} +/-  {:<4} |", 
