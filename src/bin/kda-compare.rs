@@ -1,5 +1,4 @@
 
-extern crate rgsl;
 extern crate clap;
 use clap::{App,Arg};
 use nalgebra::DVector;
