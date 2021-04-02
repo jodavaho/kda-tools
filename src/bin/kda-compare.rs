@@ -44,9 +44,10 @@ fn main() -> Result<(),String> {
     //create name->idx lookup table
     let mut idx_lookup:HashMap<String,usize> = HashMap::new();
     for idx in  0..names.len() {
-        eprintln!("Found input data: {}",&names[idx]);
+        eprint!("{} ",&names[idx]);
         idx_lookup.insert(names[idx].to_string(),idx);
     }
+    eprintln!();
 
     let command = input_args.value_of("command").unwrap_or("K");
     eprintln!("processing: {}",command);

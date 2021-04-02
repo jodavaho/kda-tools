@@ -42,8 +42,6 @@ fn main() {
 
     writeln!(stdout(),"{}",header).unwrap_or(());
 
-    let keywords = kvc::get_reserved_matchers();
-    //add none for now.
     for input_line in stdin().lock().lines()
     {
         //per-match counters:
@@ -59,7 +57,7 @@ fn main() {
             //At this point, we should be dumping the last data, which happens at the end.
         };
 
-        let (keycounts,reserved_pairs)=kvc::read_kvc_line(&line, &keywords);
+        let (keycounts,reserved_pairs)=kvc::read_kvc_line_default(&line);
         if keycounts.len()==0 && reserved_pairs.len()==0 {
             //these are not the lines we're looking for
             continue;
