@@ -1,6 +1,6 @@
 [package]
 name = "kda-tools"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Josh Vander Hook <josh@vanderhook.info>"]
 description = "Tools for doing data management on a match journal, specifally for  Hunt Showdown, but it'll work for any sport / game"
 edition = "2018"
@@ -14,5 +14,5 @@ homepage = "https://github.com/jodavaho/kda-tools"
 [dependencies]
 regex="1.4.0"
 nalgebra="0.25.0"
-kvc = "0.4.0"
+kvc = "0.5.2"
 clap ="2.33.0"
