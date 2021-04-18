@@ -203,13 +203,18 @@ fn main() -> Result<(),String> {
             //calculate the expected rates under the null hypothesis
             //Generally, here, using the funny constants, but in the case R=1 and t1=t0, it's simpler.
             //magic constant #1, d = t1/t0
-            let magic_d = n_non_group / n_group;
+            let magic_d = n_non_group as f64 / n_group as f64;
             //magic constant #2, g = R/d
-            let magic_g = h0_rate_ratio / magic_d as f64;
+            let magic_g = h0_rate_ratio as f64 / magic_d as f64;
             //now using magic constants, calculate the "hypothesis constarained rates"
             //i.e., the expected rates given H0 is true
+            if cfg!(debug_assertions){
+                eprintln!("magic d: {} and g: {}", magic_d, magic_g);
+            }
             let hypothesized_rate_group = (sum_metric_group + sum_metric_non_group) as f64/ (n_group as f64 * (1.0+1.0/magic_g));
             let hypothesized_rate_non_group = (sum_metric_group + sum_metric_non_group) as f64 / (n_non_group as f64 * (1.0+magic_g));
+            debug_assert!(hypothesized_rate_group>0.0);
+            debug_assert!(hypothesized_rate_non_group>0.0);
             if cfg!(debug_assertions){
                 eprintln!("hyp rate w/ : {}, hyp rate w/o : {}",hypothesized_rate_group ,hypothesized_rate_non_group );
                 eprintln!("metric w/ : {},  metric w/o : {}",sum_metric_group,sum_metric_non_group);
