@@ -16,3 +16,5 @@ regex="1.4.0"
 nalgebra="0.25.0"
 kvc = "0.5.2"
 clap ="2.33.0"
+statrs="0.13.0"
+
