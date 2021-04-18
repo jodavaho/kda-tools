@@ -220,10 +220,10 @@ fn main() -> Result<(),String> {
                 eprintln!("metric w/ : {},  metric w/o : {}",sum_metric_group,sum_metric_non_group);
             }
             //OK so if you follow through magic_g, under the case R=1, t0 == t1, it all cancels out nicely. 
-            let maximum_likelihood_h0 = 
+            let maximum_likelihood_h0:f64 = 
                 Poisson::new(hypothesized_rate_group * n_group  as f64).unwrap().pmf(sum_metric_group as u64)
                 * Poisson::new(hypothesized_rate_non_group * n_non_group as f64).unwrap().pmf(sum_metric_non_group as u64);
-            let maximum_likelihood_unconstrained = 
+            let maximum_likelihood_unconstrained:f64 = 
                 Poisson::new(obs_rate_group * n_group as f64).unwrap().pmf(sum_metric_group as u64)
                 * Poisson::new(obs_rate_non_group * n_non_group as f64).unwrap().pmf(sum_metric_non_group as u64);
             let test_statistic:f64 = -2.0*(maximum_likelihood_h0 / maximum_likelihood_unconstrained).ln();
