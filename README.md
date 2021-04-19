@@ -42,55 +42,79 @@ you can use whatever you want to denote loadouts or friends ... it'll just run m
 Contents of journal.txt:
 
 ```
-Tues Skirmish w/Alice A A D  B
-Wed SniperBuild w/John K K K 
-Thurs Skirmish w/John D A
+K K Sniper
+K D Shotgun
+K K JP Sniper
+K D B Shotgun JB
+K D B Sniper JB
 ```
 
-is two assists, a death and a bounty on Tuesday w/ alice;
-a hat trick of kills w/ John on wed, and a death and assist the following day. 
+is 5 matches:
 
-Then, we can try out this data:
+1. two kills with a sniper loadout
+2. a kill a death with a shotgun loadout
+3. two kills with a sniper loadout and team-mate "JP"
+4. a kill, a death, a bounty with Shotguns and team-mate "JB"
+5. Same, but with Sniper loadout
 
+Then, we can start to explore the data.
+
+
+## Use
+
+**Warning, this functionality will change rapidly prior to 1.0 release**
+
+```bash
+$ kda-compare -h
+USAGE:
+    kda-compare [FLAGS] [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+        --kda        Include the extra output KDA = (K+A)/D. You'll need to have K, D, and A entries in your log or this
+                     will fail loudly.
+    -V, --version    Prints version information
+
+OPTIONS:
+    -c, --command <COMMAND>    Command a comparison like this: 'K (: [<item>] vs [<item>] )' e.g., 'K: pistol vs
+                               shotgun' to compare kills with shotguns vs pistols. or 'K:pistol' to check pistols vs non-pistols
 ```
-< journal.txt  kvc-stretch | kda-corr
+
+
+## Use cases
+
+To check the efficacy of the "Sniper" loadout
+```
+< journal.txt kda-compare -c "K: Sniper"
 ```
 
-The output is something like:
+At this time (v0.5.0) it produces:
 
-```
-  ┌                                  ┐
-  │          0   0.558746          0 │
-  │          0 0.20674208          0 │
-  │          1 0.07981821          1 │
-  │          0  4.5680423          0 │
-  │          0 -1.6212965          0 │
-  └                                  ┘
+```bash
+Processed. Read: 5 rows and 7 variables
 
-
-         Weight:   K-D   A-D     B
-           Time:  0.00  0.00  1.00
-       Skirmish:  0.00  0.00  0.56
-        w/Alice:  0.21  0.08  4.57
-    SniperBuild: -1.62  0.00  0.00
-         w/John:  1.00  0.00  0.00
+K Sniper Shotgun D JP B JB
+Debug: processing: K:Sniper
+K:( Sniper ) 5.00/3 = 1.67  vs 2.00/2 = 1.00 Rates are same with p=0.373
 ```
 
-The top row says "You're getting more bounties as time goes on". The rest of the rows tell you how well the observed K-D, A-D spreads or B counts are explained by the factor in each row.
+This means you get on avg 1.67 kills / match with sniper vs 1.00 kills/match without sniper. It  then does a two-sided hypothesis test to see if the rates are equal. 
+
+
 
 One way to interpret this is "This doesn't make sense". That's true, it's primitive still.
 
-But, high positive numbers for w/Alice and bounty counts means your best bet for bounties is in playing with Alice. That's obvious from the journal. It also says the sniper build isn't very helpful, but skirmish isn't either. It says the main thing that matters when looking at K-D is playing w/ John. 
-
 # Get for debian / WSL
 
+For now ...
+
 ```
-wget josh.vanderhook.info/kda-tools_0.1.0_amd64.deb 
+wget josh.vanderhook.info/kda-tools_0.5.0_amd64.deb 
 md5sum  kda-tools_0.1.0_amd64.deb
 ```
 Output had better be:
 ```
-2a36501e7f234034bd778d8ccb8cf736  target/debian/kda-tools_0.1.0_amd64.deb
+6350920a358a6e1c05579034bac85911  /home/hook/ws/hunt/dev/target/debian/kda-tools_0.5.0_amd64.deb
 ```
 
 If so, then, 

@@ -230,7 +230,7 @@ fn main() -> Result<(),String> {
 
             //of course this doesn't work:
             //let p_val = .5* ( 1-ChiSquared::new(1.0).unwrap().checked_inverse_cdf(test_statistic) );
-            let p_val = 0.5 * (1.0- gamma_li(0.5,test_statistic as f64) / gamma(0.5) );
+            let p_val =  (1.0- gamma_li(0.5,test_statistic as f64) / gamma(0.5) );
 
             let mut output_string = String::new();
             output_string += &grouping_name;
