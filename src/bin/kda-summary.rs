@@ -1,4 +1,5 @@
 //use std::collections::HashMap;
+use clap::App;
 use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdin,stdout};
@@ -9,6 +10,12 @@ use std::string::String;
 
 fn main() {
     //parse the i/o "item" count
+
+    let _= App::new("kda-summarry")
+        .version( &kda_tools::version()[..] )
+        .author("Joshua Vander Hook <josh@vanderhook.info>")
+        .about(&kda_tools::about()[..])
+        .get_matches();
     let mut index = 0;
 
     //human-readable N

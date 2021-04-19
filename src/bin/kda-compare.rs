@@ -17,7 +17,7 @@ fn main() -> Result<(),String> {
     let input_args = App::new("kda-compare")
         .version( &kda_tools::version()[..] )
         .author("Joshua Vander Hook <josh@vanderhook.info>")
-        .about("Some basic conditional probabilities and bayesian analysis on a KVC log. See https://github.com/jodavaho/kda-tools for more info. ")
+        .about(&kda_tools::about()[..])
         .arg(Arg::with_name("kda")
             .long("kda")
             .takes_value(false)
