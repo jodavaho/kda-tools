@@ -105,11 +105,9 @@ Debug: processing: K:Sniper
 K:( Sniper ) 5.00/3 = 1.67  vs 2.00/2 = 1.00 Rates are same with p=0.373
 ```
 
-This means you get on avg 1.67 kills / match with sniper vs 1.00 kills/match without sniper. It  then does a two-sided hypothesis test to see if the rates are equal. 
+This means you get on avg 1.67 kills / match with sniper vs 1.00 kills/match without sniper. It  then does a two-sided hypothesis test to see if the rates are equal. If p is low (say, lower than .1) you can consider them different. More data makes the results stronger. Strength-of-predictor will be added soon.
 
-
-
-One way to interpret this is "This doesn't make sense". That's true, it's primitive still.
+One way to interpret this is "This doesn't make sense". That's true, it's primitive still, and mostly a toy for my own use.
 
 # Get for debian / WSL
 
