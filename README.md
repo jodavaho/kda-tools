@@ -73,6 +73,8 @@ $ <journal.txt kda-summary
 
 Not bad. Notice, `kda-summary` *requires* the use of tags `K` for kills, `D` for death, `B` for bounties, and `A` for assist. It outputs your per-match stats, the KDA value of `(K+A)/D`, the sum of the K, D, A and B, and the mean (avg / match) of KDA, K, D, A, and B.
 
+Note the `Date` field. If you put dates of the form `YYYY-MM-DD` somewhere per line in the journal, it will populate that field. See example above or [kvc](github.com/jodavaho/kvc.git).
+
 # KDA-Compare
 
 With 
