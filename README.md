@@ -153,7 +153,7 @@ md5sum  kda-tools_0.1.0_amd64.deb
 ```
 Output had better be:
 ```
-6350920a358a6e1c05579034bac85911  /home/hook/ws/hunt/dev/target/debian/kda-tools_0.5.0_amd64.deb
+6350920a358a6e1c05579034bac85911  kda-tools_0.5.0_amd64.deb
 ```
 
 If so, then, 
