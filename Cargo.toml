@@ -17,5 +17,5 @@ categories = ["Command Line Utilities"]
 kvc = "0.5.2"
 clap ="2.33.0"
 statrs="0.13.0"
-poisson-rate-test="1.0.1"
+poisson-rate-test="1.0.2"
 

@@ -1,6 +1,6 @@
 
 extern crate clap;
-use poisson_rate_test::poisson_lhr_test;
+use poisson_rate_test::two_tailed_rates_equal;
 use clap::{App,Arg};
 use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
@@ -195,10 +195,9 @@ fn main() -> Result<(),String> {
             //debug_assert!(obs_rate_group>0.0);
             //debug_assert!(obs_rate_non_group>0.0);
 
-            let p_val = poisson_lhr_test(
-                sum_metric_group, n_group,
-                sum_metric_non_group, n_non_group,
-                1.0 /*Test for equivalent rates*/
+            let p_val = two_tailed_rates_equal(
+                sum_metric_group, n_group as f64,
+                sum_metric_non_group, n_non_group as f64
             );
             //specific case of probability 0 | non-group rate and only n_group trials
             let mut output_string = String::new();
