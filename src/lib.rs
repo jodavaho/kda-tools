@@ -1,6 +1,3 @@
-use statrs::distribution::Discrete;
-use statrs::distribution::Poisson;
-use statrs::function::gamma::{gamma_li, gamma};
 
 pub mod helpers;
 pub fn version()->String{
