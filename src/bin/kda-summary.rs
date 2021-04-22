@@ -1,11 +1,8 @@
-//use std::collections::HashMap;
 use clap::App;
 use std::collections::HashMap;
 use std::io::Write;
 use std::io::{stdin,stdout};
 use std::io::BufRead;
-//use std::fs::File;
-//use std::path::Path;
 use std::string::String;
 
 fn main() {

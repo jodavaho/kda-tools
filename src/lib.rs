@@ -1,6 +1,10 @@
+use statrs::distribution::Discrete;
+use statrs::distribution::Poisson;
+use statrs::function::gamma::{gamma_li, gamma};
+
 pub mod helpers;
 pub fn version()->String{
-    return std::format!("0.2.1, built with kvc v {}",kvc::version()).to_string();
+    return std::format!("0.7.0, built with kvc {} and poisson-rate-test {}",kvc::version(),poisson_rate_test::version()).to_string();
 }
 pub fn about()->String{
     "Some basic conditional probabilities and bayesian analysis on a KVC log. \n\

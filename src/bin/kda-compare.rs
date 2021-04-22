@@ -1,12 +1,10 @@
 
 extern crate clap;
-use statrs::distribution::Discrete;
+use poisson_rate_test::poisson_lhr_test;
 use clap::{App,Arg};
 use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
 use std::string::String;
-use statrs::distribution::{Poisson, ChiSquared};
-use statrs::function::gamma::{gamma_li, gamma};
 
 
 /**
@@ -18,17 +16,10 @@ fn main() -> Result<(),String> {
         .version( &kda_tools::version()[..] )
         .author("Joshua Vander Hook <josh@vanderhook.info>")
         .about(&kda_tools::about()[..])
-        .arg(Arg::with_name("kda")
-            .long("kda")
-            .takes_value(false)
-            .help("Include the extra output KDA = (K+A)/D. You'll need to have K, D, and A entries in your log or this will fail loudly.")
-        )
         .arg(Arg::with_name("command")
-            .short("c")
-            .long("command")
-            .value_name("COMMAND")
-            .takes_value(true)
-            .help("Command a comparison like this: 'K (: [<item>] vs [<item>] )' e.g., 'K: pistol vs shotgun' to compare kills with shotguns vs pistols. use '_' to denote 'baseline (avg over all matches)'.")
+        .required(true)
+        .default_value("K D A : _")
+        .help("The A/B comparison to run, of the form '<some variables : <other variables>'. e.g., 'K: pistol' will check kills with and wtihout pitols")
         )
         .get_matches();
     let local_sin = stdin();
@@ -43,13 +34,14 @@ fn main() -> Result<(),String> {
     
     //create name->idx lookup table
     let mut idx_lookup:HashMap<String,usize> = HashMap::new();
+    eprintln!("Varibables found:");
     for idx in  0..names.len() {
         eprint!("{} ",&names[idx]);
         idx_lookup.insert(names[idx].to_string(),idx);
     }
     eprintln!();
 
-    let command = input_args.value_of("command").unwrap_or("K");
+    let command = input_args.value_of("command").unwrap();
     eprintln!("Debug: processing: {}",command);
     let inout :Vec<String> = command.split(":").map(|x| x.to_string()).collect();
  
@@ -186,60 +178,44 @@ fn main() -> Result<(),String> {
             let sum_metric_non_group:f64 = metric_values_without_group.iter().sum();
             let obs_rate_group = sum_metric_group / n_group as f64;
             let obs_rate_non_group = sum_metric_non_group / n_non_group as f64;
-            debug_assert!(sum_metric_group>0.0);
-            debug_assert!(sum_metric_non_group>0.0);
-            debug_assert!(obs_rate_group>0.0);
-            debug_assert!(obs_rate_non_group>0.0);
-            if cfg!(debug_assertions){
-                eprintln!("Debug: Observed sum with grouping: {}, w/o: {}",sum_metric_group,sum_metric_non_group);
-                eprintln!("Debug: Observed rate with grouping: {}, w/o: {} ",obs_rate_group,obs_rate_non_group);
+            if n_group <1 {
+                eprintln!(
+                    "No matches found with grouping '{}', this test is useless. Skipping!",grouping_name.to_string()
+                );
+                continue;
             }
-
-            //by Gu 2008 Testing Ratio of Two Poisson Rates
-            //use magic factor R/d, w/ d=t0/t1 (the # trials, I guess ... )
-            //so r0 is "rate of kills with gear" and r1 is "rate of kills w/o gear"
-            // so t0 is # of games w/ gear, and t1 is #games without gear
-            let h0_rate_ratio = 1.0; // Check for equality of rates under null hypothesis
-            //calculate the expected rates under the null hypothesis
-            //Generally, here, using the funny constants, but in the case R=1 and t1=t0, it's simpler.
-            //magic constant #1, d = t1/t0
-            let magic_d = n_non_group as f64 / n_group as f64;
-            //magic constant #2, g = R/d
-            let magic_g = h0_rate_ratio as f64 / magic_d as f64;
-            //now using magic constants, calculate the "hypothesis constarained rates"
-            //i.e., the expected rates given H0 is true
-            if cfg!(debug_assertions){
-                eprintln!("magic d: {} and g: {}", magic_d, magic_g);
+            if sum_metric_group == 0.0 && cfg!(debug_assertions){
+                eprintln!("No matches with grouping and metric, reduced to p(0|M) ");
             }
-            let hypothesized_rate_group = (sum_metric_group + sum_metric_non_group) as f64/ (n_group as f64 * (1.0+1.0/magic_g));
-            let hypothesized_rate_non_group = (sum_metric_group + sum_metric_non_group) as f64 / (n_non_group as f64 * (1.0+magic_g));
-            debug_assert!(hypothesized_rate_group>0.0);
-            debug_assert!(hypothesized_rate_non_group>0.0);
-            if cfg!(debug_assertions){
-                eprintln!("hyp rate w/ : {}, hyp rate w/o : {}",hypothesized_rate_group ,hypothesized_rate_non_group );
-                eprintln!("metric w/ : {},  metric w/o : {}",sum_metric_group,sum_metric_non_group);
+            if n_non_group == 0 && cfg!(debug_assertions){
+                eprintln!("No matches without grouping, cannot do A/B comparisons");
             }
-            //OK so if you follow through magic_g, under the case R=1, t0 == t1, it all cancels out nicely. 
-            let maximum_likelihood_h0:f64 = 
-                Poisson::new(hypothesized_rate_group * n_group  as f64).unwrap().pmf(sum_metric_group as u64)
-                * Poisson::new(hypothesized_rate_non_group * n_non_group as f64).unwrap().pmf(sum_metric_non_group as u64);
-            let maximum_likelihood_unconstrained:f64 = 
-                Poisson::new(obs_rate_group * n_group as f64).unwrap().pmf(sum_metric_group as u64)
-                * Poisson::new(obs_rate_non_group * n_non_group as f64).unwrap().pmf(sum_metric_non_group as u64);
-            let test_statistic:f64 = -2.0*(maximum_likelihood_h0 / maximum_likelihood_unconstrained).ln();
+            //Note, these debugs are commented out because they are not fail-fast conditions any more. 
+            //debug_assert!(sum_metric_non_group>0.0);
+            //debug_assert!(obs_rate_group>0.0);
+            //debug_assert!(obs_rate_non_group>0.0);
 
-            //of course this doesn't work:
-            //let p_val = .5* ( 1-ChiSquared::new(1.0).unwrap().checked_inverse_cdf(test_statistic) );
-            let p_val =  (1.0- gamma_li(0.5,test_statistic as f64) / gamma(0.5) );
-
+            let p_val = poisson_lhr_test(
+                sum_metric_group, n_group,
+                sum_metric_non_group, n_non_group,
+                1.0 /*Test for equivalent rates*/
+            );
+            //specific case of probability 0 | non-group rate and only n_group trials
             let mut output_string = String::new();
             output_string += &grouping_name;
             output_string += " ";
             output_string += &std::format!("{:0.2}/{:0.2} = {:0.2} ",sum_metric_group,n_group ,obs_rate_group);
-            output_string += &" vs ";
-            output_string += &std::format!("{:0.2}/{:0.2} = {:0.2} ",sum_metric_non_group,n_non_group,obs_rate_non_group);
-            output_string += &std::format!("Rates are same with p={:0.3}",p_val);
+            if n_non_group>0
+            {
+                output_string += &" vs ";
+                output_string += &std::format!("{:0.2}/{:0.2} = {:0.2} ",sum_metric_non_group,n_non_group,obs_rate_non_group);
+                output_string += &std::format!("Rates are same with p={:0.3}",p_val);
+            } else {
+                output_string += " all matches contain grouping "
+            }
             writeln!(stdout(), "{}", output_string).unwrap_or(());
+
+
         }
     }
 

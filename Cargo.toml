@@ -1,20 +1,21 @@
 [package]
 name = "kda-tools"
-version = "0.5.0"
+version = "0.7.0"
 authors = ["Josh Vander Hook <josh@vanderhook.info>"]
 description = "Tools for doing data management on a match journal, specifally for  Hunt Showdown, but it'll work for any sport / game"
 edition = "2018"
 readme= "README.md"
 license-file = "LICENSE"
 homepage = "https://github.com/jodavaho/kda-tools"
+keywords = ["games","journal","text-processing"]
+categories = ["Command Line Utilities"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex="1.4.0"
-nalgebra="0.25.0"
 kvc = "0.5.2"
 clap ="2.33.0"
 statrs="0.13.0"
+poisson-rate-test="1.0.1"
 
