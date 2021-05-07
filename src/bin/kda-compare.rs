@@ -27,7 +27,7 @@ fn main() -> Result<(),String> {
         .about(&kda_tools::about()[..])
         .arg(Arg::with_name("command")
         .required(true)
-        .default_value("K D A : _")
+        .default_value("K D A : all")
         .help("The A/B comparison to run, of the form '<some variables : <other variables>'. e.g., 'K: pistol' will check kills with and wtihout pitols")
         )
         .get_matches();
@@ -120,7 +120,9 @@ fn main() -> Result<(),String> {
             let mut grouping_occurances : HashSet<_> = (0..num_matches).collect();
             for item in grouping{
                 grouping_name+=&(item.to_string()+" ");
-                eprintln!("Debug: Checking: {}",item);
+                if cfg!(debug_assertions){
+                    eprintln!("Debug: Checking: {}",item);
+                }
 
                 match &item[..]{
                     "_"=> {
@@ -239,7 +241,9 @@ fn main() -> Result<(),String> {
                 }
             );
 
-            eprintln!("Processed: {}",grouping_name);
+            if cfg!(debug_assertions){
+                eprintln!("Processed: {}",grouping_name);
+            }
         }
 
         for mut r in records.iter_mut(){
