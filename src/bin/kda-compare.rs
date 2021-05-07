@@ -6,7 +6,16 @@ use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
 use std::string::String;
 
-
+#[derive(Debug)]
+struct ResultRecord{
+    metric_name:String,
+    variable_groupings:String,
+    p_val:f64,
+    n_with:usize,
+    n_without:usize,
+    sum_with:f64,
+    sum_without:f64,
+}
 /**
  * Takes a long sequence of kda stats (see kda-stretch), and computes correlations
  */
@@ -35,6 +44,8 @@ fn main() -> Result<(),String> {
     //create name->idx lookup table
     let mut idx_lookup:HashMap<String,usize> = HashMap::new();
     eprintln!("Varibables found:");
+
+    //but skip the keyword fields for this (we just want items/ variables)
     for idx in  0..names.len() {
         eprint!("{} ",&names[idx]);
         idx_lookup.insert(names[idx].to_string(),idx);
@@ -51,8 +62,24 @@ fn main() -> Result<(),String> {
     let mut comparisons:Vec< Vec<String>> = Vec::new();
     let all_comparisons:Vec<String>= inout[1].split("vs").map(|x| x.trim().to_string()).collect() ;
     for grouping in all_comparisons{
-        //it's a string that's a list of items
-        comparisons.push( grouping.split_whitespace().map(|x| x.to_string()).collect());
+        if grouping == "all"{
+            //create singular groupings from names.
+            //comparisons.push(vec![]);
+            'namecheck:for n in &names{
+                for (possible_keyword,_) in kvc::get_reserved_matchers()
+                {
+                    if possible_keyword==*n{
+                        continue 'namecheck;
+                    }
+                }
+                //nope, not a kvc keyword
+                //comparisons.last_mut().unwrap().push(n.clone());
+                comparisons.push( vec![n.clone()] ) ;
+            }
+        } else {
+            //it's a string that's a list of items
+            comparisons.push( grouping.split_whitespace().map(|x| x.to_string()).collect());
+        }
     }
 
     //verify all input variables
@@ -81,25 +108,21 @@ fn main() -> Result<(),String> {
 
 
     for metric in metrics.iter(){
+        let mut records = Vec::<ResultRecord>::new();
         //these are "rows"
         //get the metrics / match
         let metric_idx = idx_lookup.get(metric).unwrap();
+
         for grouping in comparisons.iter(){
             //initialize the metric "return value", which is a list of values we compare against
-            let mut grouping_name = metric.to_string()+":( ";
+            let mut grouping_name = "( ".to_string();
             //calculate metrics for this grouping, starting with "all" and downselecting
             let mut grouping_occurances : HashSet<_> = (0..num_matches).collect();
             for item in grouping{
                 grouping_name+=&(item.to_string()+" ");
+                eprintln!("Debug: Checking: {}",item);
 
                 match &item[..]{
-                    "*"=> {
-                        if cfg!(debug_assertinos){
-                            eprintln!("Fetching: '*' as 'all individual inputs'");
-                        }
-                        //there's one special case, "*" which means all-to-all compare,
-                        //which is weird and probably should be handled seperately ... it means n *rows* not n *columns* 
-                    },
                     "_"=> {
                         if cfg!(debug_assertinos){
                             eprintln!("Fetching: '_' as 'baseline'");
@@ -176,11 +199,15 @@ fn main() -> Result<(),String> {
 
             let sum_metric_group:f64 = metric_values_with_group.iter().sum();
             let sum_metric_non_group:f64 = metric_values_without_group.iter().sum();
-            let obs_rate_group = sum_metric_group / n_group as f64;
-            let obs_rate_non_group = sum_metric_non_group / n_non_group as f64;
             if n_group <1 {
                 eprintln!(
                     "No matches found with grouping '{}', this test is useless. Skipping!",grouping_name.to_string()
+                );
+                continue;
+            }
+            if n_metric_non_group <1 {
+                eprintln!(
+                    "No matches found without grouping '{}', this test is useless. Skipping!",grouping_name.to_string()
                 );
                 continue;
             }
@@ -199,21 +226,59 @@ fn main() -> Result<(),String> {
                 sum_metric_group, n_group as f64,
                 sum_metric_non_group, n_non_group as f64
             );
-            //specific case of probability 0 | non-group rate and only n_group trials
+
+            records.push(
+                ResultRecord{
+                    metric_name:metric.clone(),
+                    variable_groupings:grouping_name.clone(),
+                    p_val:1.0-p_val,
+                    n_with:n_group,
+                    n_without:n_non_group,
+                    sum_with:sum_metric_group,
+                    sum_without:sum_metric_non_group
+                }
+            );
+
+            eprintln!("Processed: {}",grouping_name);
+        }
+
+        for mut r in records.iter_mut(){
+            if r.n_with==0{
+                //no matches with variable. Comparison meaningless. 
+            } else if r.n_without == 0{
+                //no matches without metric. Comparison equals baseline.
+            } else if r.sum_with as f32 /(r.n_with as f32) > r.sum_without as f32 /r.n_without as f32 {
+                //with has higher rate than without. Let's sort specially as positive p value for display.
+                r.p_val=r.p_val.abs();
+            } else if r.sum_with as f32 /(r.n_with as f32) < r.sum_without as f32 /r.n_without as f32 {
+                //with has lower rate than without. let's sort specially as negative for display
+                r.p_val=-r.p_val.abs();
+            } else {
+               //what do we do when equal??? It'll never happen aahahahahahhaaahahaah 
+            }
+        }
+
+        //number crunching done. Let's display
+        records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
+
+        //now sort
+
+        for r in records{
+            let obs_rate_group = r.sum_with as f32 / r.n_with as f32;
             let mut output_string = String::new();
-            output_string += &grouping_name;
+            output_string += &(metric.clone()+&r.variable_groupings);
             output_string += " ";
-            output_string += &std::format!("{:0.2}/{:0.2} = {:0.2} ",sum_metric_group,n_group ,obs_rate_group);
-            if n_non_group>0
+            output_string += &std::format!("{}/{} = {:0.2} ",r.sum_with as i32,r.n_with ,obs_rate_group);
+            if r.n_without >0
             {
+                let obs_rate_non_group = r.sum_without as f32 / r.n_without as f32;
                 output_string += &" vs ";
-                output_string += &std::format!("{:0.2}/{:0.2} = {:0.2} ",sum_metric_non_group,n_non_group,obs_rate_non_group);
-                output_string += &std::format!("Rates are same with p={:0.3}",p_val);
+                output_string += &std::format!("{}/{} = {:0.2} ",r.sum_without as i32,r.n_without,obs_rate_non_group);
+                output_string += &std::format!("Rates are different with p={:0.3}",r.p_val.abs());
             } else {
                 output_string += " all matches contain grouping "
             }
             writeln!(stdout(), "{}", output_string).unwrap_or(());
-
 
         }
     }
