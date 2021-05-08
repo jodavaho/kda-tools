@@ -21,10 +21,15 @@ struct ResultRecord{
  */
 fn main() -> Result<(),String> {
 
-    let input_args = App::new("kda-compare")
+    let input_args = App::new("kda-explore")
         .version( &kda_tools::version()[..] )
         .author("Joshua Vander Hook <josh@vanderhook.info>")
-        .about(&kda_tools::about()[..])
+        .about(
+            &
+                (kda_tools::about()
+                +"\n This tool allows manual exploration of metrics with and without a given loadout. For automated exploration, see kda-compare"
+                ) [..]
+            )
         .arg(Arg::with_name("command")
         .required(true)
         .default_value("K D A : all")
