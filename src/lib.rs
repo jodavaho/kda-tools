@@ -1,5 +1,4 @@
 
-pub mod helpers;
 pub fn version()->String{
     return std::format!("0.8.0, built with kvc {} and poisson-rate-test {}",kvc::version(),poisson_rate_test::version()).to_string();
 }

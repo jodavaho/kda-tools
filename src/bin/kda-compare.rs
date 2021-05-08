@@ -124,33 +124,19 @@ fn main() -> Result<(),String> {
                     eprintln!("Debug: Checking: {}",item);
                 }
 
-                match &item[..]{
-                    "_"=> {
-                        if cfg!(debug_assertinos){
-                            eprintln!("Fetching: '_' as 'baseline'");
-                        }
-                        //compare vs all data "baseline"
-                        //relevent_matches.push( (0..num_matches).collect::<Vec<_>>() );
-                        //split_names.push("Baseline".to_string());
-                    },
-                    _=>{
-                        //user specifically requested some data by name as part of a multi-item grouping
-                        //what column of the data corresponds to the  interesting one?
-                        assert!(idx_lookup.contains_key(item),"Could not find {} in input data!",item);
-                        if cfg!(debug_assertinos){
-                            eprintln!("Debug: Fetching {} by name",item);
-                        }
-                        let data_idx = *idx_lookup.get(item).unwrap();
-                        //for which matches did that item appear?
-                        let item_occurances = data.iter()
-                            //filter first by idx matching the one in question
-                            .filter(| ((_,idx),_) |  *idx==data_idx )
-                            //and return only those rows
-                            .map(| ((time,_),_) | *time ).collect::<HashSet<usize>>();
-                        //use intersetino for AND relationship
-                        grouping_occurances.retain(|x| item_occurances.contains(x));
-                    },
-                }; 
+                assert!(idx_lookup.contains_key(item),"Could not find {} in input data!",item);
+                if cfg!(debug_assertinos){
+                    eprintln!("Debug: Fetching {} by name",item);
+                }
+                let data_idx = *idx_lookup.get(item).unwrap();
+                //for which matches did that item appear?
+                let item_occurances = data.iter()
+                    //filter first by idx matching the one in question
+                    .filter(| ((_,idx),_) |  *idx==data_idx )
+                    //and return only those rows
+                    .map(| ((time,_),_) | *time ).collect::<HashSet<usize>>();
+                //use intersetino for AND relationship
+                grouping_occurances.retain(|x| item_occurances.contains(x));
             }
             grouping_name+=")";
             let all_matches = (0..num_matches).collect::<HashSet<_>>();
