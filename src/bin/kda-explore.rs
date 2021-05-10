@@ -1,3 +1,4 @@
+
 extern crate clap;
 use poisson_rate_test::two_tailed_rates_equal;
 use clap::{App,Arg};
@@ -15,23 +16,24 @@ struct ResultRecord{
     sum_with:f64,
     sum_without:f64,
 }
+/**
+ * Takes a long sequence of kda stats (see kda-stretch), and computes correlations
+ */
 fn main() -> Result<(),String> {
 
-    let input_args = App::new("kda-compare")
+    let input_args = App::new("kda-explore")
         .version( &kda_tools::version()[..] )
         .author("Joshua Vander Hook <josh@vanderhook.info>")
         .about(
-            & (kda_tools::about()
-            +
-            "\n\n This tool compares the value of KDA across item groupings automatically, and shows kda expected values, spreads, and likelihood ratio test results for all groupings. 
-            \n\n It *expects* input in kvc format (one match per line), and processs the variables K, D, and A, as a function of *all other* variables present. So if you have a 'date' variable in your data, it will need to be passed as a to-ignore field
-            "
-            ) [..]
-        ).arg(Arg::with_name("ignore")
-        .help("List of fields to ignore (if they appear in data). You can ignoring fields A B and C as '-i A,B,C' or '-i A -i B -i C' but not '-i A B C' or '-i A, B, C'")
-        .short("i")
-        .multiple(false)
-        .required(false)
+            &
+                (kda_tools::about()
+                +"\n This tool allows manual exploration of metrics with and without a given loadout. For automated exploration, see kda-compare"
+                ) [..]
+            )
+        .arg(Arg::with_name("command")
+        .required(true)
+        .default_value("K D A : all")
+        .help("The A/B comparison to run, of the form '<some variables : <other variables>'. e.g., 'K: pistol' will check kills with and wtihout pitols")
         )
         .get_matches();
     let local_sin = stdin();

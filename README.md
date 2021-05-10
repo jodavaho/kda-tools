@@ -75,23 +75,24 @@ Not bad. Notice, `kda-summary` *requires* the use of tags `K` for kills, `D` for
 
 Note the `Date` field. If you put dates of the form `YYYY-MM-DD` somewhere per line in the journal, it will populate that field. See example above or [kvc](github.com/jodavaho/kvc.git).
 
-# KDA-Compare
+# KDA-Explore (formerly kda-compare)
 
 With 
-`kda-compare` 
-the semantics of 'K' vs 'k' vs "kill" is irrelevant. We explore the data by asking it to analyze variables by name. For example, in the  data above, to see kills "K" per match with Sniper and without, you form the "experiment" denoted as "K:Sniper" and ask `kda-compare` to run that experiment by `kda-compare -c "K : Sniper"`
+`kda-explore` 
+the semantics of 'K' vs 'k' vs "kill" is irrelevant. We explore the data by asking it to analyze variables by name. For example, in the  data above, to see kills "K" per match with Sniper and without, you form the "experiment" denoted as "K:Sniper" and ask `kda-explore` to run that experiment by `kda-explore -c "K : Sniper"`
 
 You can run many experiments seperated by 'vs' (this will change), against many output varaibles ... All are valid:
 
-- `kda-compare -c "K D : Sniper vs Shotgun"` to see which is better
-- `kda-compare -c "D : K"` to see if you die more when you kill stuff or not
-- `kda-compare -c "Sniper: JB"` to see if you play sniper more or less when you're with JB
+- `kda-explore "K D : Sniper vs Shotgun"` to see which is better
+- `kda-explore "D : K"` to see if you die more when you kill stuff or not
+- `kda-explore "Sniper: JB"` to see if you play sniper more or less when you're with JB
+- `kda-explore K:all` to see kill spreads and sorted rate comparisons for all variables
 
 and so on ... each "tag" (item on a line in a journal) is a valid input or output depending on your determination of experiments.
 
 Heres one:
 ```bash
-$ <journal.txt kda-compare -c "K D : Sniper vs Shotgun"
+$ <journal.txt kda-explore "K D : Sniper vs Shotgun"
 Processed. Read: 5 rows and 7 variables
 K Sniper Shotgun D JP JB B 
 Debug: processing: K: Sniper vs Shotgun
@@ -106,57 +107,27 @@ We note that the rates of kills with shotgun exactly equal the rates of kills w/
 **Warning, this functionality will change rapidly prior to 1.0 release**
 
 ```bash
-$ kda-compare -h
+$ kda-explore -h
 USAGE:
-    kda-compare [FLAGS] [OPTIONS]
+    kda-explore <command>
 
 FLAGS:
     -h, --help       Prints help information
-        --kda        Include the extra output KDA = (K+A)/D. You'll need to have K, D, and A entries in your log or this
-                     will fail loudly.
     -V, --version    Prints version information
 
-OPTIONS:
-    -c, --command <COMMAND>    Command a comparison like this: 'K (: [<item>] vs [<item>] )' e.g., 'K: pistol vs
-                               shotgun' to compare kills with shotguns vs pistols. or 'K:pistol' to check pistols vs non-pistols
+ARGS:
+    <command>    The A/B comparison to run, of the form '<some variables : <other variables>'. e.g., 'K: pistol'
+                 will check kills with and wtihout pitols [default: K D A : all]
 ```
 
-
-## Use cases
-
-To check the efficacy of the "Sniper" loadout
-```
-< journal.txt kda-compare -c "K: Sniper"
-```
-
-At this time (v0.5.0) it produces:
-
-```bash
-Processed. Read: 5 rows and 7 variables
-
-K Sniper Shotgun D JP B JB
-Debug: processing: K:Sniper
-K:( Sniper ) 5.00/3 = 1.67  vs 2.00/2 = 1.00 Rates are same with p=0.373
-```
-
-This means you get on avg 1.67 kills / match with sniper vs 1.00 kills/match without sniper. It  then does a two-sided hypothesis test to see if the rates are equal. If p is low (say, lower than .1) you can consider them different. More data makes the results stronger. Strength-of-predictor will be added soon.
 
 One way to interpret this is "This doesn't make sense". That's true, it's primitive still, and mostly a toy for my own use.
 
 # Get for debian / WSL
 
-For now ...
+For now, just grab one of the test debs in releases/
 
-```
-wget josh.vanderhook.info/kda-tools_0.5.0_amd64.deb 
-md5sum  kda-tools_0.1.0_amd64.deb
-```
-Output had better be:
-```
-6350920a358a6e1c05579034bac85911  kda-tools_0.5.0_amd64.deb
-```
-
-If so, then, 
+Then,
 
 ```
 sudo dpkg -i kda-tools_0.5.0_amd64.deb
@@ -169,12 +140,12 @@ You can use the example above as-is.
 - [x] document match journal format better. see: github.com/jodavaho/kvc.git
 - [x] improve match journal to allow :count. (see kvc again)
 - [ ] provide linter for match journal
-- [ ] tool to create / factor matricies in format ammenable to third-party analysis (e.g., R)
+- [x] tool to create / factor matricies in format ammenable to third-party analysis (e.g., R)
 - [ ] Perform power tests / experiment design 
-- [ ] remove '-c' as mandatory switch ... obsolete when baseline '\_' was removed
+- [x] remove '-c' as mandatory switch ... obsolete when baseline '\_' was removed
 - [ ] Provide a library version in C, 
   - [ ] C++, 
-  - [ ] Rust
+  - [x] Rust
 
 # Known issues
 
