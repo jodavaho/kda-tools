@@ -2,7 +2,7 @@ use rand::thread_rng;
 use  rand_distr::{Poisson,Distribution};
 
 pub fn version()->String{
-    return std::format!("0.8.0, built with kvc {} and poisson-rate-test {}",kvc::version(),poisson_rate_test::version()).to_string();
+    return std::format!("0.8.1-Alpha, built with kvc {} and poisson-rate-test {}",kvc::version(),poisson_rate_test::version()).to_string();
 }
 pub fn about()->String{
     "Some basic conditional probabilities and bayesian analysis on a KVC log. \n\
