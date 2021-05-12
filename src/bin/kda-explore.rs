@@ -265,9 +265,10 @@ fn main() -> Result<(),String> {
         }
 
         //number crunching done. Let's display
+        //now sort
         records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
 
-        //now sort
+        //then align
 
         let mut output_string = String::new();
         output_string += &std::format!("# {} {:<20} ","metric","grp");
