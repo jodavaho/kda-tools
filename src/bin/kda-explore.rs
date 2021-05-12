@@ -35,6 +35,17 @@ fn main() -> Result<(),String> {
         .default_value("K D A : all")
         .help("The A/B comparison to run, of the form '<some variables : <other variables>'. e.g., 'K: pistol' will check kills with and wtihout pitols")
         )
+        .arg(Arg::with_name("out_format")
+        .required(false)
+        .default_value("wsv")
+        .help("Output format. Currently supported:
+         - wsv: Whitespace Seperated Values
+         - tsv: Tab Seperated Values
+         - csv: Comma Seperated Values
+         - html: HTML table
+         - vnl: Vnlog (default)"
+            )
+        )
         .get_matches();
     let local_sin = stdin();
     let line_itr = local_sin.lock().lines();
@@ -120,7 +131,7 @@ fn main() -> Result<(),String> {
 
         for grouping in comparisons.iter(){
             //initialize the metric "return value", which is a list of values we compare against
-            let mut grouping_name = "( ".to_string();
+            let mut grouping_name = "".to_string();
             //calculate metrics for this grouping, starting with "all" and downselecting
             let mut grouping_occurances : HashSet<_> = (0..num_matches).collect();
             for item in grouping{
@@ -143,7 +154,7 @@ fn main() -> Result<(),String> {
                 //use intersetino for AND relationship
                 grouping_occurances.retain(|x| item_occurances.contains(x));
             }
-            grouping_name+=")";
+            grouping_name=grouping_name.trim().replace(" ","+");
             let all_matches = (0..num_matches).collect::<HashSet<_>>();
             let grouping_non_occurances = all_matches.symmetric_difference(&grouping_occurances).collect::<HashSet<_>>();
 
@@ -258,20 +269,25 @@ fn main() -> Result<(),String> {
 
         //now sort
 
+        let mut output_string = String::new();
+        output_string += &std::format!("# {} {:<20} ","metric","grp");
+        output_string += &std::format!("{:<6} {:<6} {:<6}","n_w","M_w","r_w");
+        output_string += &std::format!("{:<6} {:<6} {:<6}","n","M","r");
+        output_string += &std::format!("{:<6}","1-p[n_w|r]");
+        writeln!(stdout(), "{}", output_string).unwrap_or(());
         for r in records{
             let obs_rate_group = r.sum_with as f32 / r.n_with as f32;
             let mut output_string = String::new();
-            output_string += &(metric.clone()+&r.variable_groupings);
-            output_string += " ";
-            output_string += &std::format!("{}/{} = {:0.2} ",r.sum_with as i32,r.n_with ,obs_rate_group);
+            output_string += &std::format!( " {} {:<20} ", metric,r.variable_groupings);
+            output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",r.sum_with as i32,r.n_with ,obs_rate_group);
             if r.n_without >0
             {
                 let obs_rate_non_group = r.sum_without as f32 / r.n_without as f32;
-                output_string += &" vs ";
-                output_string += &std::format!("{}/{} = {:0.2} ",r.sum_without as i32,r.n_without,obs_rate_non_group);
-                output_string += &std::format!("Rates are different with p={:0.3}",r.p_val.abs());
+                output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",r.sum_without as i32,r.n_without,obs_rate_non_group);
+                output_string += &std::format!(" {:<2.2}",r.p_val.abs());
             } else {
-                output_string += " all matches contain grouping "
+                output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",0,0,"undef");
+                output_string += &std::format!(" {:<2.2}","-");
             }
             writeln!(stdout(), "{}", output_string).unwrap_or(());
 
