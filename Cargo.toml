@@ -1,6 +1,6 @@
 [package]
 name = "kda-tools"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Josh Vander Hook <josh@vanderhook.info>"]
 description = "Tools for doing data management on a match journal, specifally for  Hunt Showdown, but it'll work for any sport / game"
 edition = "2018"
@@ -21,5 +21,5 @@ rand="0.8.3"
 rand_distr="0.4.0"
 poisson-rate-test="1.1.0"
 pbr="1.0.4"
-cli-table="0.4.5"
+term_grid = "0.2"
 
