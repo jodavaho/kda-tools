@@ -39,11 +39,11 @@ fn main() -> Result<(),String> {
         .required(false)
         .default_value("wsv")
         .help("Output format. Currently supported:
-         - wsv: Whitespace Seperated Values
+         - wsv: Whitespace Seperated Values (default)
          - tsv: Tab Seperated Values
          - csv: Comma Seperated Values
          - html: HTML table
-         - vnl: Vnlog (default)"
+         - vnl: Vnlog"
             )
         )
         .get_matches();
@@ -265,9 +265,10 @@ fn main() -> Result<(),String> {
         }
 
         //number crunching done. Let's display
+        //now sort
         records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
 
-        //now sort
+        //then align
 
         let mut output_string = String::new();
         output_string += &std::format!("# {} {:<20} ","metric","grp");
