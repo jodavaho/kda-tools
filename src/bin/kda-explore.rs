@@ -39,11 +39,11 @@ fn main() -> Result<(),String> {
         .required(false)
         .default_value("wsv")
         .help("Output format. Currently supported:
-         - wsv: Whitespace Seperated Values
+         - wsv: Whitespace Seperated Values (default)
          - tsv: Tab Seperated Values
          - csv: Comma Seperated Values
          - html: HTML table
-         - vnl: Vnlog (default)"
+         - vnl: Vnlog"
             )
         )
         .get_matches();

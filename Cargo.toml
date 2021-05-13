@@ -1,6 +1,6 @@
 [package]
 name = "kda-tools"
-version = "0.8.1"
+version = "0.9.0"
 authors = ["Josh Vander Hook <josh@vanderhook.info>"]
 description = "Tools for doing data management on a match journal, specifally for  Hunt Showdown, but it'll work for any sport / game"
 edition = "2018"
@@ -14,10 +14,12 @@ categories = ["Command Line Utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kvc = "0.5.2"
+kvc = "1.0.0"
 clap ="2.33.0"
 statrs="0.13.0"
 rand="0.8.3"
 rand_distr="0.4.0"
-poisson-rate-test="1.0.2"
+poisson-rate-test="1.1.0"
+pbr="1.0.4"
+cli-table="0.4.5"
 
