@@ -1,5 +1,4 @@
 extern crate clap;
-//use cli_table::{format::Justify, print_stdout, Cell, Style, Table};
 extern crate pbr;
 use pbr::{ProgressBar};
 //use poisson_rate_test::two_tailed_rates_equal;
@@ -18,6 +17,26 @@ struct ResultRecord{
     n_without:usize,
     metric_with:f64,
     metric_without:f64,
+}
+
+fn align_output(outs: &Vec<String>,widths:&Vec<usize>,seperator:&str)
+-> String{
+    let len:usize=widths.iter().sum();
+    let final_len = len + outs.len()-1;//<-seperators
+    let mut ret = String::with_capacity(final_len);
+    for i in 0..outs.len(){
+        let wi=widths[i];
+        let s = &outs[i];
+        let slen = s.len().min(wi);
+        ret.push_str(&s[0..slen]);
+        if i<outs.len()-1{
+            ret.push_str(&seperator[..]);
+        }
+        for _ in slen..wi{
+            ret.push(' ');
+        }
+    }
+    ret
 }
 fn main() -> Result<(),String> {
 
@@ -40,21 +59,21 @@ fn main() -> Result<(),String> {
         .takes_value(false)
         .short("f")
         )
+        /*
         .arg(Arg::with_name("ignore")
         .help("List of fields to ignore (if they appear in data). You can ignoring fields A B and C as '-i A,B,C' or '-i A -i B -i C' but not '-i A B C' or '-i A, B, C'. That's because of shell magic, not becuase of the way it was implemented")
         .short("i")
         .multiple(false)
         .required(false)
-        )
+        )*/
         .arg(Arg::with_name("out_format")
         .required(false)
+        .short("o")
         .default_value("wsv")
-        .help("Output format. One of:
-           wsv: Whitespace Seperated Values 
-           tsv: Tab Seperated Values (not impl)
-           csv: Comma Seperated Values (not impl)
-           html: HTML table (not impl)
-           vnl: Vnlog (not impl)"
+        .possible_values(
+            &["wsv", "tsv", "csv", "vnl"]
+        )
+        .help("Output format which can be one of Vnlog or Whitespace-,  Tab-, or Comma-seperated."
             )
         )
         .get_matches();
@@ -72,10 +91,8 @@ fn main() -> Result<(),String> {
     
     //create name->idx lookup table
     let mut idx_lookup:HashMap<String,usize> = HashMap::new();
-    eprintln!("Varibables found:");
 
     for idx in  0..names.len() {
-        eprint!("{} ",&names[idx]);
         idx_lookup.insert(names[idx].to_string(),idx);
     }
     eprintln!();
@@ -95,13 +112,9 @@ fn main() -> Result<(),String> {
 
     let group_count = groups.len();
     let mut process_bar = ProgressBar::new(group_count as u64);
-    for grouping in groups
+    'nextgrp:  for grouping in groups
     {
         process_bar.inc();
-        match &grouping[..]{
-            "K"|"D"|"A"|"B"|"BK"|"Date"=>continue,
-            _=>{},
-        }
         //initialize the metric "return value", which is a list of values we compare against
         let mut grouping_name = "".to_string();
         //calculate metrics for this grouping, starting with "all" and downselecting
@@ -110,6 +123,10 @@ fn main() -> Result<(),String> {
         let names = vec![grouping.clone()];
         // ^^ Fix that
         for item in names{
+            match &item[..]{
+                "K"|"D"|"A"|"B"|"BK"|"Date"=>continue 'nextgrp,
+                _=>{},
+            }
             grouping_name+=&(item.to_string()+" ");
             if cfg!(debug_assertions){
                 eprintln!("Debug: Checking: {}",item);
@@ -296,57 +313,59 @@ fn main() -> Result<(),String> {
          max_grp_len = r.variable_groupings.len().max(max_grp_len);
      }
 
-    let mut output_string = String::new();
-    let mut title_string = String::new();
-    for _ in 0..max_grp_len{
-        title_string.push(' ');
-    }
-    title_string.replace_range(.."grp".len(), "grp");
-    output_string += &std::format!("{} {}","met",title_string);
-    output_string += &std::format!(" {} {}","val","N");
-    output_string += &std::format!(" {} {}","~val","M");
-    output_string += &std::format!(" {}","p(better)");
-    writeln!(stdout(), "{}", output_string).unwrap_or(());
-    for r in pvp_records{
+     let header_start =match input_args.value_of("out_format").unwrap_or("wsv"){
+         "wsv"=>"",
+         "tsv"=>"",
+         "csv"=>"",
+         "vnl"=>"# ",
+        _=>panic!("Unrecognized value of out_format"),
+     };
+     let seperator=match input_args.value_of("out_format").unwrap_or("wsv"){
+         "wsv"=>" ",
+         "tsv"=>"\t",
+         "csv"=>",",
+         "vnl"=>" ",
+        _=>panic!("Unrecognized value of out_format"),
+     };
+    let header=vec![
+     "met".to_string(),
+     "grp".to_string(),
+     "val".to_string(),
+     "N".to_string(),
+     "~val".to_string(),
+     "M".to_string(),
+     "p".to_string(),
+    ];
+    let lengths = vec![
+     6,max_grp_len+1,5,5,5,5,5
+    ];
+    assert!(lengths.len()==header.len());
+    let output_string = align_output(&header, &lengths, &seperator[..]);
+    writeln!(stdout(), "{}{}", header_start,output_string).unwrap_or(());
+  
+    //print em all
+    let mut all_records = Vec::<ResultRecord>::with_capacity(pve_records.len() + pvp_records.len());
+    all_records.append(&mut pvp_records);
+    all_records.append(&mut pve_records);
+    for r in all_records{
 
-        let variable_name = r.variable_groupings.clone();
-        let mut var_string = String::new();
-        for _ in 0..max_grp_len{
-            var_string.push(' ');
-        }
-        var_string.replace_range(..variable_name.len(), &variable_name[..]);
-        let mut output_string = String::new();
-        output_string += &std::format!( "{} {} ", "kda",var_string);
-        output_string += &std::format!(" {:<2.2} {:<3}",r.metric_with ,r.n_with);
+        let mut row = vec![
+            r.metric_name.clone(), 
+            r.variable_groupings.clone(),
+            std::format!("{:2.2}",r.metric_with),
+            std::format!("{:2.2}",r.n_with),
+        ];
         if r.n_without >0
         {
-            output_string += &std::format!(" {:<2.2} {:<3}",r.metric_without,r.n_without);
-            output_string += &std::format!(" {:<2.2}",r.p_val);
+            row.push(std::format!("{:2.2}",r.metric_without));
+            row.push(std::format!("{:2.2}",r.n_without));
+            row.push(std::format!("{:2.2}",r.p_val));
         } else {
-            output_string += &std::format!(" {:<2.2} {:<3}","-",0);
-            output_string += &std::format!(" {:<2.2}","-");
+            row.push("-".to_string());
+            row.push("0".to_string());
+            row.push("-".to_string());
         }
-        writeln!(stdout(), "{}", output_string).unwrap_or(());
-
-    }
-    for r in pve_records{
-        let variable_name = r.variable_groupings.clone();
-        let mut var_string = String::new();
-        for _ in 0..max_grp_len{
-            var_string.push(' ');
-        }
-        var_string.replace_range(..variable_name.len(), &variable_name[..]);
-        let mut output_string = String::new();
-        output_string += &std::format!( "{} {} ", "b/a",var_string);
-        output_string += &std::format!(" {:<2.2} {:<3}",r.metric_with ,r.n_with);
-        if r.n_without >0
-        {
-            output_string += &std::format!(" {:<2.2} {:<3}",r.metric_without,r.n_without);
-            output_string += &std::format!(" {:<2.2}",r.p_val);
-        } else {
-            output_string += &std::format!(" {:<2.2} {:<3}","-",0);
-            output_string += &std::format!(" {:<2.2}","-");
-        }
+        let output_string = align_output(&row, &lengths, &seperator[..]);
         writeln!(stdout(), "{}", output_string).unwrap_or(());
 
     }
