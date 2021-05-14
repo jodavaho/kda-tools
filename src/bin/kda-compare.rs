@@ -353,6 +353,7 @@ fn main() -> Result<(),String> {
         }
     }
     process_bar.finish();
+    writeln!(std::io::stderr(), "").unwrap_or(());
 
     //number crunching done. Let's display 
 
