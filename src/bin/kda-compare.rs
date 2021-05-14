@@ -26,6 +26,12 @@ fn main() -> Result<(),String> {
             "
             ) [..]
         )
+        .arg(Arg::with_name("notes")
+        .required(false)
+        .short("n")
+        .takes_value(false)
+        .help("Display notes about particular test cases in the output")
+        )
         .arg(Arg::with_name("fast")
         .help("Speed up computation by doing a fewer number of iterations. Helpful for quick looks but the ordering of some sets may change across multiple invocations")
         .required(false)
@@ -233,8 +239,8 @@ fn main() -> Result<(),String> {
                     n_group,
                     num_samples
                 ){
-                    Ok(p) => (p,"Infinite was successfully processed"),
-                    Err(_)=> (f64::NAN,"Could not process, no baseline data?"),
+                    Ok(p) => (p,"Infinite occurs in baseline, so it's a fair comparison"),
+                    Err(_)=> (f64::NAN,"Could not compare, no baseline data?"),
                 }
             (_,_) => match ratio_events_equal_pval_n(
                     ka_non_group,
@@ -246,7 +252,7 @@ fn main() -> Result<(),String> {
                     num_samples
                 ){
                     Ok(p)=>(p,""),
-                    Err(_)=>(f64::NAN,"Could not process"),
+                    Err(_)=> (f64::NAN,"Could not compare. no baseline data?"),
                 }
         };
         let (pve_val_improved,pve_comment) = match (b_group,d_group) {
@@ -260,7 +266,7 @@ fn main() -> Result<(),String> {
                     n_group,
                     num_samples
                 ){
-                    Ok(p) => (p,"Infinite was successfully processed"),
+                    Ok(p) => (p,"Infinite occurs in baseline, so it's a fair comparison"),
                     Err(_)=> (f64::NAN,"Could not process, no baseline data?"),
                 }
             (_,_) => match ratio_events_equal_pval_n(
@@ -273,7 +279,7 @@ fn main() -> Result<(),String> {
                     num_samples
                 ){
                     Ok(p) => (p,""),
-                    Err(_)=> (f64::NAN,"Could not process"),
+                    Err(_)=> (f64::NAN,"Could not compare. No baseline data?"),
                 }
         };
 
@@ -328,46 +334,56 @@ fn main() -> Result<(),String> {
 
     //now do some very basic alignment
     let mut max_grp_len:usize=0;
-     for r in pvp_records.iter(){
-         max_grp_len = r.variable_groupings.len().max(max_grp_len);
-     }
-     for r in pve_records.iter(){
-         max_grp_len = r.variable_groupings.len().max(max_grp_len);
-     }
 
-     let header_start =match input_args.value_of("out_format").unwrap_or("wsv"){
-         "wsv"=>"",
-         "tsv"=>"",
-         "csv"=>"",
-         "vnl"=>"# ",
-        _=>panic!("Unrecognized value of out_format"),
-     };
-     let seperator=match input_args.value_of("out_format").unwrap_or("wsv"){
-         "wsv"=>" ",
-         "tsv"=>"\t",
-         "csv"=>",",
-         "vnl"=>" ",
-        _=>panic!("Unrecognized value of out_format"),
-     };
-    let header=vec![
-     "met".to_string(),
-     "grp".to_string(),
-     "n/d".to_string(),
-     "val".to_string(),
-     "N".to_string(),
-     "n/d".to_string(),
-     "~val".to_string(),
-     "M".to_string(),
-     "p".to_string(),
-     "notes".to_string(),
+    for r in pvp_records.iter(){
+        max_grp_len = r.variable_groupings.len().max(max_grp_len);
+    }
+    for r in pve_records.iter(){
+        max_grp_len = r.variable_groupings.len().max(max_grp_len);
+    }
+
+    let header_start =match input_args.value_of("out_format").unwrap_or("wsv"){
+        "wsv"=>"",
+        "tsv"=>"",
+        "csv"=>"",
+        "vnl"=>"# ",
+    _=>panic!("Unrecognized value of out_format"),
+    };
+    let seperator=match input_args.value_of("out_format").unwrap_or("wsv"){
+        "wsv"=>" ",
+        "tsv"=>"\t",
+        "csv"=>",",
+        "vnl"=>" ",
+    _=>panic!("Unrecognized value of out_format"),
+    };
+
+    let show_notes = input_args.is_present("notes");
+
+    let mut header=vec![
+        "met".to_string(),
+        "grp".to_string(),
+        "n/d".to_string(),
+        "val".to_string(),
+        "N".to_string(),
+        "n/d".to_string(),
+        "~val".to_string(),
+        "M".to_string(),
+        "p".to_string(),
     ];
-    let lengths = vec![
-     6,max_grp_len+1,8,5,5,8,5,5,5,usize::MAX,
+    let mut lengths = vec![
+        6,max_grp_len+1,8,5,5,8,5,5,5,
     ];
+
+
+    if show_notes{
+        header.push("notes".to_string());
+        lengths.push(usize::MAX);
+    }
+
     assert!(lengths.len()==header.len());
     let output_string = align_output(&header, &lengths, &seperator[..]);
     writeln!(stdout(), "{}{}", header_start,output_string).unwrap_or(());
-  
+
     //print em all
     let mut all_records = Vec::<ResultRecord>::with_capacity(pve_records.len() + pvp_records.len());
     all_records.append(&mut pvp_records);
@@ -393,7 +409,9 @@ fn main() -> Result<(),String> {
             row.push("0".to_string());
             row.push("-".to_string());
         }
-        row.push(r.comment);
+        if show_notes{
+            row.push(r.comment);
+        }
         let output_string = align_output(&row, &lengths, &seperator[..]);
         writeln!(stdout(), "{}", output_string).unwrap_or(());
 
