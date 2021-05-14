@@ -1,4 +1,8 @@
 use itertools::any;
+use std::sync::Mutex;
+use std::sync::Arc;
+use rayon::prelude::{ IntoParallelIterator, ParallelIterator};
+use rayon::iter::IntoParallelRefIterator;
 use combinations::Combinations;
 extern crate clap;
 extern crate pbr;
@@ -113,18 +117,20 @@ fn main() -> Result<(),String> {
     let groups:Vec<Vec<String>> = Combinations::new(names,depth).collect();
 
     //verify all output variables
-    let mut pvp_records = Vec::<ResultRecord>::new();
-    let mut pve_records = Vec::<ResultRecord>::new();
+    let threaded_pvp_records = Arc::new(Mutex::new(Vec::<ResultRecord>::new()));
+    let threaded_pve_records = Arc::new(Mutex::new(Vec::<ResultRecord>::new()));
     //these are "rows"
 
     let group_count = groups.len();
     let stderr = std::io::stderr();
-    let mut process_bar = ProgressBar::on(stderr, group_count as u64);
-    'nextgrp:  for grouping in groups
+    let process_bar = Arc::new(Mutex::new(ProgressBar::on(stderr, group_count as u64)));
+
+    'nextgroup: for i in 0..group_count
     {
-        process_bar.inc();
-        if any(&grouping,  |element| ignore_set.contains(element)){
-            continue 'nextgrp;
+        let grouping = &groups[i];
+        process_bar.lock().unwrap().inc();
+        if any(grouping,  |element| ignore_set.contains(element)){
+            continue
         }
         //initialize the metric "return value", which is a list of values we compare against
         let mut grouping_name = "".to_string();
@@ -132,7 +138,7 @@ fn main() -> Result<(),String> {
         let mut grouping_occurances : HashSet<_> = (0..num_matches).collect();
         for item in grouping{
             match &item[..]{
-                "K"|"D"|"A"|"B"|"BK"|"Date"=>continue 'nextgrp,
+                "K"|"D"|"A"|"B"|"BK"|"Date"=>continue 'nextgroup,
                 _=>{},
             }
             grouping_name+=&(item.to_string()+" ");
@@ -140,11 +146,11 @@ fn main() -> Result<(),String> {
                 eprintln!("Debug: Checking: {}",item);
             }
 
-            assert!(idx_lookup.contains_key(&item),"Could not find {} in input data!",item);
+            assert!(idx_lookup.contains_key(item),"Could not find {} in input data!",item);
             if cfg!(debug_assertinos){
                 eprintln!("Debug: Fetching {} by name",item);
             }
-            let data_idx = *idx_lookup.get(&item).unwrap();
+            let data_idx = *idx_lookup.get(item).unwrap();
             //for which matches did that item appear?
             let item_occurances = data.iter()
                 //filter first by idx matching the one in question
@@ -161,42 +167,42 @@ fn main() -> Result<(),String> {
         //now we have a grouping for which to request data later. 
         //what about zeros ... times when metric did not occur but grouping did? The rest of those are just diff in len
 
-        let k_with_grp = data.iter()
+        let k_with_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_occurances.contains(match_number) &&  *variable_idx == k_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let k_without_grp = data.iter()
+        let k_without_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_non_occurances.contains(match_number) &&  *variable_idx == k_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let d_with_grp = data.iter()
+        let d_with_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_occurances.contains(match_number) &&  *variable_idx == d_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let d_without_grp = data.iter()
+        let d_without_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_non_occurances.contains(match_number) &&  *variable_idx == d_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let a_with_grp = data.iter()
+        let a_with_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_occurances.contains(match_number) &&  *variable_idx == a_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let a_without_grp = data.iter()
+        let a_without_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_non_occurances.contains(match_number) &&  *variable_idx == a_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let b_with_grp = data.iter()
+        let b_with_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_occurances.contains(match_number) &&  *variable_idx == b_idx)
                                 //and return only those rows and values
                                 .map(| ((_,_),v) | v.parse::<f64>().unwrap() ).collect::<Vec<_>>();
-        let b_without_grp = data.iter()
+        let b_without_grp = data.par_iter()
                                 //filter first by idx matching the one in question
                                 .filter(| ((match_number,variable_idx),_) |  grouping_non_occurances.contains(match_number) &&  *variable_idx == b_idx)
                                 //and return only those rows and values
@@ -211,7 +217,7 @@ fn main() -> Result<(),String> {
             {
                 eprintln!( "No matches found with grouping '{}', this test is useless. Skipping!",grouping_name.to_string());
             }
-            continue;
+            continue
         }
         let n_non_group = grouping_non_occurances.len();
         if n_non_group == 0 && cfg!(debug_assertions){
@@ -314,7 +320,7 @@ fn main() -> Result<(),String> {
                 }
         };
 
-        pvp_records.push(
+        threaded_pvp_records.lock().unwrap().push(
             ResultRecord{
                 metric_name:"kda".to_string(),
                 variable_groupings:grouping_name.clone(),
@@ -331,7 +337,7 @@ fn main() -> Result<(),String> {
             }
         );
 
-        pve_records.push(
+        threaded_pve_records.lock().unwrap().push(
             ResultRecord{
                 metric_name:"b/d".to_string(),
                 variable_groupings:grouping_name.clone(),
@@ -352,7 +358,11 @@ fn main() -> Result<(),String> {
             eprintln!("Debug: Processed: {}",grouping_name);
         }
     }
-    process_bar.finish();
+    process_bar.lock().unwrap().finish();
+    writeln!(std::io::stderr(), "").unwrap_or(());
+
+    let mut pvp_records:Vec<_> = threaded_pvp_records.lock().unwrap().drain(..).collect();
+    let mut pve_records:Vec<_> = threaded_pve_records.lock().unwrap().drain(..).collect();
 
     //number crunching done. Let's display 
 
@@ -416,7 +426,7 @@ fn main() -> Result<(),String> {
     writeln!(stdout(), "{}{}", header_start,output_string).unwrap_or(());
 
     //print em all
-    let mut all_records = Vec::<ResultRecord>::with_capacity(pve_records.len() + pvp_records.len());
+    let mut all_records = Vec::<ResultRecord>::with_capacity(&pve_records.len() + &pvp_records.len());
     all_records.append(&mut pvp_records);
     all_records.append(&mut pve_records);
     for r in all_records{
