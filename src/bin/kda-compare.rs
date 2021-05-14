@@ -1,10 +1,11 @@
+use itertools::any;
+use combinations::Combinations;
 extern crate clap;
 extern crate pbr;
 use kda_tools::by_pval;
 use pbr::{ProgressBar};
 use kda_tools::ResultRecord;
 use kda_tools::align_output;
-//use poisson_rate_test::two_tailed_rates_equal;
 use poisson_rate_test::bootstrap::param::ratio_events_equal_pval_n;
 use clap::{App,Arg};
 use std::collections::{HashMap,HashSet};
@@ -22,7 +23,6 @@ fn main() -> Result<(),String> {
             "\nThis tool compares the value of KDA across item groupings automatically, and shows kda expected values, spreads, and likelihood ratio test results for all groupings.\
             \n\nIf you'd like to do your own comparisons, please use kda-explore
             \n\nIt *expects* input in kvc format (one match per line), and processs the variables K, D, and A, as a function of *all other* variables present. It ignores kvc keywords / fields (like dates), but you'll have to specify other things to ignore manually.
-            \n\nTHIS TOOL IS VERY EXPERIMENTAL, nothing is expected to work.
             "
             ) [..]
         )
@@ -38,13 +38,23 @@ fn main() -> Result<(),String> {
         .takes_value(false)
         .short("f")
         )
-        /*
         .arg(Arg::with_name("ignore")
         .help("List of fields to ignore (if they appear in data). You can ignoring fields A B and C as '-i A,B,C' or '-i A -i B -i C' but not '-i A B C' or '-i A, B, C'. That's because of shell magic, not becuase of the way it was implemented")
         .short("i")
-        .multiple(false)
+        .multiple(true)
+        .takes_value(true)
         .required(false)
-        )*/
+        )
+        .arg(Arg::with_name("group_size")
+        .required(false)
+        .short("g")
+        .long("group-size")
+        .default_value("1")
+        .possible_values(
+            &["1", "2", "3", "4"]
+        )
+        .help("Instead of individual items (group_size==1), rank by enumerated groupings that appear in data of a given size.")
+        )
         .arg(Arg::with_name("out_format")
         .required(false)
         .short("o")
@@ -67,6 +77,20 @@ fn main() -> Result<(),String> {
     }
 
     let go_faster = input_args.is_present("fast");
+
+    let ignore_list = match input_args.is_present("ignore")
+    {
+        true=>input_args.values_of("ignore").unwrap().collect::<Vec<&str>>(),
+        false=>Vec::<&str>::new(),
+    };
+            
+    if ignore_list.len()>0 && cfg!(debug_assertions){
+        eprintln!("Ingoring: ");
+        for x in &ignore_list
+        {
+            eprintln!("{} ",x);
+        }
+    }
     
     //create name->idx lookup table
     let mut idx_lookup:HashMap<String,usize> = HashMap::new();
@@ -82,7 +106,11 @@ fn main() -> Result<(),String> {
     let b_idx = *idx_lookup.get("B").unwrap_or(&usize::MAX);
     //create two new metrics, pvp = (K+A)/D, and pve = B/D
 
-    let groups = names.clone();
+    let depth = input_args.value_of("group_size").unwrap_or("1").parse::<usize>().unwrap_or(1);
+
+    let ignore_set:HashSet<String> = ignore_list.iter().map(|x| x.to_string()).collect();
+
+    let groups:Vec<Vec<String>> = Combinations::new(names,depth).collect();
 
     //verify all output variables
     let mut pvp_records = Vec::<ResultRecord>::new();
@@ -90,18 +118,19 @@ fn main() -> Result<(),String> {
     //these are "rows"
 
     let group_count = groups.len();
-    let mut process_bar = ProgressBar::new(group_count as u64);
+    let stderr = std::io::stderr();
+    let mut process_bar = ProgressBar::on(stderr, group_count as u64);
     'nextgrp:  for grouping in groups
     {
         process_bar.inc();
+        if any(&grouping,  |element| ignore_set.contains(element)){
+            continue 'nextgrp;
+        }
         //initialize the metric "return value", which is a list of values we compare against
         let mut grouping_name = "".to_string();
         //calculate metrics for this grouping, starting with "all" and downselecting
         let mut grouping_occurances : HashSet<_> = (0..num_matches).collect();
-        // KLUDGE KLUDGE KLUDGE
-        let names = vec![grouping.clone()];
-        // ^^ Fix that
-        for item in names{
+        for item in grouping{
             match &item[..]{
                 "K"|"D"|"A"|"B"|"BK"|"Date"=>continue 'nextgrp,
                 _=>{},
@@ -176,10 +205,12 @@ fn main() -> Result<(),String> {
         
         //now we have everything to do a with/without comparison for this grouping
         let n_group = grouping_occurances.len();
-        if n_group <1 {
-            eprintln!(
-                "No matches found with grouping '{}', this test is useless. Skipping!",grouping_name.to_string()
-            );
+        if n_group <1 
+        {
+            if cfg!(debug_assertions) 
+            {
+                eprintln!( "No matches found with grouping '{}', this test is useless. Skipping!",grouping_name.to_string());
+            }
             continue;
         }
         let n_non_group = grouping_non_occurances.len();

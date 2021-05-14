@@ -1,6 +1,6 @@
 [package]
 name = "kda-tools"
-version = "1.0.1"
+version = "1.1.0"
 authors = ["Josh Vander Hook <josh@vanderhook.info>"]
 description = "Tools for doing data management on a match journal, specifally for  Hunt Showdown, but it'll work for any sport / game"
 edition = "2018"
@@ -16,6 +16,8 @@ categories = ["Command Line Utilities"]
 [dependencies]
 claim = "0.5.0"
 clap ="2.33.0"
+combinations ="0.1.0"
+itertools = "0.10.0"
 kvc = "1.0.0"
 pbr="1.0.4"
 poisson-rate-test="1.2.0"
