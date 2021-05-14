@@ -1,21 +1,14 @@
 
 extern crate clap;
+use kda_tools::align_output;
+use kda_tools::by_short_pval;
+use kda_tools::ShortRecord;
 use poisson_rate_test::two_tailed_rates_equal;
 use clap::{App,Arg};
 use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
 use std::string::String;
 
-#[derive(Debug)]
-struct ResultRecord{
-    metric_name:String,
-    variable_groupings:String,
-    p_val:f64,
-    n_with:usize,
-    n_without:usize,
-    sum_with:f64,
-    sum_without:f64,
-}
 /**
  * Takes a long sequence of kda stats (see kda-stretch), and computes correlations
  */
@@ -37,13 +30,12 @@ fn main() -> Result<(),String> {
         )
         .arg(Arg::with_name("out_format")
         .required(false)
+        .short("o")
         .default_value("wsv")
-        .help("Output format. Currently supported:
-         - wsv: Whitespace Seperated Values (default)
-         - tsv: Tab Seperated Values
-         - csv: Comma Seperated Values
-         - html: HTML table
-         - vnl: Vnlog"
+        .possible_values(
+            &["wsv", "tsv", "csv", "vnl"]
+        )
+        .help("Output format which can be one of Vnlog or Whitespace-,  Tab-, or Comma-seperated."
             )
         )
         .get_matches();
@@ -124,7 +116,7 @@ fn main() -> Result<(),String> {
 
 
     for metric in metrics.iter(){
-        let mut records = Vec::<ResultRecord>::new();
+        let mut records = Vec::<ShortRecord>::new();
         //these are "rows"
         //get the metrics / match
         let metric_idx = idx_lookup.get(metric).unwrap();
@@ -232,14 +224,15 @@ fn main() -> Result<(),String> {
             );
 
             records.push(
-                ResultRecord{
+                ShortRecord{
                     metric_name:metric.clone(),
                     variable_groupings:grouping_name.clone(),
                     p_val:1.0-p_val,
                     n_with:n_group,
                     n_without:n_non_group,
-                    sum_with:sum_metric_group,
-                    sum_without:sum_metric_non_group
+                    metric_with:sum_metric_group,
+                    metric_without:sum_metric_non_group,
+                    comment:"".to_string(),
                 }
             );
 
@@ -248,15 +241,16 @@ fn main() -> Result<(),String> {
             }
         }
 
+        //I hate that I played with p-vals to get some kind of two-tailed test
         for mut r in records.iter_mut(){
             if r.n_with==0{
                 //no matches with variable. Comparison meaningless. 
             } else if r.n_without == 0{
                 //no matches without metric. Comparison equals baseline.
-            } else if r.sum_with as f32 /(r.n_with as f32) > r.sum_without as f32 /r.n_without as f32 {
+            } else if r.metric_with as f32 /(r.n_with as f32) > r.metric_without as f32 /r.n_without as f32 {
                 //with has higher rate than without. Let's sort specially as positive p value for display.
                 r.p_val=r.p_val.abs();
-            } else if r.sum_with as f32 /(r.n_with as f32) < r.sum_without as f32 /r.n_without as f32 {
+            } else if r.metric_with as f32 /(r.n_with as f32) < r.metric_without as f32 /r.n_without as f32 {
                 //with has lower rate than without. let's sort specially as negative for display
                 r.p_val=-r.p_val.abs();
             } else {
@@ -266,31 +260,74 @@ fn main() -> Result<(),String> {
 
         //number crunching done. Let's display
         //now sort
-        records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
+        records.sort_by(by_short_pval);
+        records.reverse();
 
         //then align
+        //now do some very basic alignment
+        let mut max_grp_len:usize=0;
+        for r in records.iter(){
+            max_grp_len = r.variable_groupings.len().max(max_grp_len);
+        }
 
-        let mut output_string = String::new();
-        output_string += &std::format!("# {} {:<20} ","metric","grp");
-        output_string += &std::format!("{:<6} {:<6} {:<6}","n_w","M_w","r_w");
-        output_string += &std::format!("{:<6} {:<6} {:<6}","n","M","r");
-        output_string += &std::format!("{:<6}","1-p[n_w|r]");
-        writeln!(stdout(), "{}", output_string).unwrap_or(());
+        let header_start =match input_args.value_of("out_format").unwrap_or("wsv"){
+            "wsv"=>"",
+            "tsv"=>"",
+            "csv"=>"",
+            "vnl"=>"# ",
+            _=>panic!("Unrecognized value of out_format"),
+        };
+        let seperator=match input_args.value_of("out_format").unwrap_or("wsv"){
+            "wsv"=>" ",
+            "tsv"=>"\t",
+            "csv"=>",",
+            "vnl"=>" ",
+            _=>panic!("Unrecognized value of out_format"),
+        };
+
+        let header=vec![
+        "met".to_string(),
+        "grp".to_string(),
+        "n".to_string(),
+        "M".to_string(),
+        "rate".to_string(),
+        "~n".to_string(),
+        "~M".to_string(),
+        "~rate".to_string(),
+        "p".to_string(),
+        "notes".to_string(),
+        ];
+
+        let lengths = vec![
+        6,max_grp_len+1,5,5,5,5,5,5,5,usize::MAX,
+        ];
+        assert!(lengths.len()==header.len());
+        let output_string = align_output(&header, &lengths, &seperator[..]);
+        writeln!(stdout(), "{}{}", header_start,output_string).unwrap_or(());
+
         for r in records{
-            let obs_rate_group = r.sum_with as f32 / r.n_with as f32;
-            let mut output_string = String::new();
-            output_string += &std::format!( " {} {:<20} ", metric,r.variable_groupings);
-            output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",r.sum_with as i32,r.n_with ,obs_rate_group);
+            let obs_rate_group = r.metric_with as f32 / r.n_with as f32;
+            let mut row=vec![
+                r.metric_name.clone(), 
+                r.variable_groupings.clone(),
+                std::format!("{}",r.metric_with as u64),
+                std::format!("{}",r.n_with),
+                std::format!("{:2.2}",obs_rate_group),
+            ];
+            row.push(std::format!("{}",r.metric_without as u64));
+            row.push(std::format!("{}",r.n_without));
             if r.n_without >0
             {
-                let obs_rate_non_group = r.sum_without as f32 / r.n_without as f32;
-                output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",r.sum_without as i32,r.n_without,obs_rate_non_group);
-                output_string += &std::format!(" {:<2.2}",r.p_val.abs());
+                let obs_rate_non_group = r.metric_without as f32 / r.n_without as f32;
+                row.push(std::format!("{:2.2}",obs_rate_non_group));
             } else {
-                output_string += &std::format!(" {:<2.2}  {:<2.2}  {:<2.2} ",0,0,"undef");
-                output_string += &std::format!(" {:<2.2}","-");
+                row.push("-".to_string());
             }
-            writeln!(stdout(), "{}", output_string).unwrap_or(());
+            //I hate that I played with p-vals to get some kind of two-tailed test
+            row.push(std::format!("{:<2.2}",1.0-r.p_val.abs()));
+            let output_string = align_output(&row, &lengths, &seperator[..]);
+            writeln!(stdout(), "{}{}", header_start,output_string).unwrap_or(());
+            
 
         }
     }

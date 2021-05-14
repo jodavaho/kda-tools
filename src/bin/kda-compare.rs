@@ -1,6 +1,9 @@
 extern crate clap;
 extern crate pbr;
+use kda_tools::by_pval;
 use pbr::{ProgressBar};
+use kda_tools::ResultRecord;
+use kda_tools::align_output;
 //use poisson_rate_test::two_tailed_rates_equal;
 use poisson_rate_test::bootstrap::param::ratio_events_equal_pval_n;
 use clap::{App,Arg};
@@ -8,36 +11,6 @@ use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
 use std::string::String;
 
-#[derive(Debug)]
-struct ResultRecord{
-    metric_name:String,
-    variable_groupings:String,
-    p_val:f64,
-    n_with:usize,
-    n_without:usize,
-    metric_with:f64,
-    metric_without:f64,
-}
-
-fn align_output(outs: &Vec<String>,widths:&Vec<usize>,seperator:&str)
--> String{
-    let len:usize=widths.iter().sum();
-    let final_len = len + outs.len()-1;//<-seperators
-    let mut ret = String::with_capacity(final_len);
-    for i in 0..outs.len(){
-        let wi=widths[i];
-        let s = &outs[i];
-        let slen = s.len().min(wi);
-        ret.push_str(&s[0..slen]);
-        if i<outs.len()-1{
-            ret.push_str(&seperator[..]);
-        }
-        for _ in slen..wi{
-            ret.push(' ');
-        }
-    }
-    ret
-}
 fn main() -> Result<(),String> {
 
     let input_args = App::new("kda-compare")
@@ -249,50 +222,94 @@ fn main() -> Result<(),String> {
             true=>250,
             false=>2500,
         };
-        let pvp_val_improved = ratio_events_equal_pval_n(
-            ka_group,
-            d_group,
-            n_group,
-            ka_non_group,
-            d_non_group,
-            n_non_group,
-            num_samples
-        );
-        let pve_val_improved = ratio_events_equal_pval_n(
-            b_group,
-            d_group,
-            n_group,
-            b_non_group,
-            d_non_group,
-            n_non_group,
-            num_samples
-        );
-        if pvp_val_improved.is_ok(){
-            pvp_records.push(
-                ResultRecord{
-                    metric_name:"kda".to_string(),
-                    variable_groupings:grouping_name.clone(),
-                    p_val:pvp_val_improved.unwrap(),
-                    n_with:n_group,
-                    n_without:n_non_group,
-                    metric_with: kda_group,
-                    metric_without:kda_non_group,
+        let (pvp_val_improved,pvp_comment) = match (ka_group,d_group) {
+            (0,0) => (f64::NAN,"Metric is undefined"),
+            (_,0) => match ratio_events_equal_pval_n(
+                    ka_non_group,
+                    d_non_group,
+                    n_non_group,
+                    ka_group,
+                    d_group,
+                    n_group,
+                    num_samples
+                ){
+                    Ok(p) => (p,"Infinite was successfully processed"),
+                    Err(_)=> (f64::NAN,"Could not process, no baseline data?"),
                 }
-            );
-        }
-        if pve_val_improved.is_ok(){
-            pve_records.push(
-                ResultRecord{
-                    metric_name:"b/d".to_string(),
-                    variable_groupings:grouping_name.clone(),
-                    p_val:pve_val_improved.unwrap(),
-                    n_with:n_group,
-                    n_without:n_non_group,
-                    metric_with: bd_group,
-                    metric_without:bd_non_group,
+            (_,_) => match ratio_events_equal_pval_n(
+                    ka_non_group,
+                    d_non_group,
+                    n_non_group,
+                    ka_group,
+                    d_group,
+                    n_group,
+                    num_samples
+                ){
+                    Ok(p)=>(p,""),
+                    Err(_)=>(f64::NAN,"Could not process"),
                 }
-            );
-        }
+        };
+        let (pve_val_improved,pve_comment) = match (b_group,d_group) {
+            (0,0) => (f64::NAN,"Metric is undefined"),
+            (_,0) => match ratio_events_equal_pval_n(
+                    b_non_group,
+                    d_non_group,
+                    n_non_group,
+                    b_group,
+                    d_group,
+                    n_group,
+                    num_samples
+                ){
+                    Ok(p) => (p,"Infinite was successfully processed"),
+                    Err(_)=> (f64::NAN,"Could not process, no baseline data?"),
+                }
+            (_,_) => match ratio_events_equal_pval_n(
+                    b_non_group,
+                    d_non_group,
+                    n_non_group,
+                    b_group,
+                    d_group,
+                    n_group,
+                    num_samples
+                ){
+                    Ok(p) => (p,""),
+                    Err(_)=> (f64::NAN,"Could not process"),
+                }
+        };
+
+        pvp_records.push(
+            ResultRecord{
+                metric_name:"kda".to_string(),
+                variable_groupings:grouping_name.clone(),
+                p_val:pvp_val_improved,
+                n_with:n_group,
+                n_without:n_non_group,
+                metric_with: kda_group,
+                metric_without:kda_non_group,
+                numer_with:ka_group,
+                denom_with:d_group,
+                numer_without:ka_non_group,
+                denom_without:d_non_group,
+                comment:pvp_comment.to_string(),
+            }
+        );
+
+        pve_records.push(
+            ResultRecord{
+                metric_name:"b/d".to_string(),
+                variable_groupings:grouping_name.clone(),
+                p_val:pve_val_improved,
+                n_with:n_group,
+                n_without:n_non_group,
+                metric_with: bd_group,
+                metric_without:bd_non_group,
+                numer_with:b_group,
+                denom_with:d_group,
+                numer_without:b_non_group,
+                denom_without:d_non_group,
+                comment:pve_comment.to_string(),
+            }
+        );
 
         if cfg!(debug_assertions){
             eprintln!("Debug: Processed: {}",grouping_name);
@@ -300,9 +317,14 @@ fn main() -> Result<(),String> {
     }
     process_bar.finish();
 
-    //number crunching done. Let's display NOTE REV COMPARE
-    pvp_records.sort_by(|a,b| b.p_val.partial_cmp(&a.p_val).unwrap());
-    pve_records.sort_by(|a,b| b.p_val.partial_cmp(&a.p_val).unwrap());
+    //number crunching done. Let's display 
+
+    //special sort so NAN p-vals are *last* for display
+  
+    pvp_records.sort_by(by_pval);
+    pve_records.sort_by(by_pval);
+    //pvp_records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
+    //pve_records.sort_by(|a,b| a.p_val.partial_cmp(&b.p_val).unwrap());
 
     //now do some very basic alignment
     let mut max_grp_len:usize=0;
@@ -330,14 +352,17 @@ fn main() -> Result<(),String> {
     let header=vec![
      "met".to_string(),
      "grp".to_string(),
+     "n/d".to_string(),
      "val".to_string(),
      "N".to_string(),
+     "n/d".to_string(),
      "~val".to_string(),
      "M".to_string(),
      "p".to_string(),
+     "notes".to_string(),
     ];
     let lengths = vec![
-     6,max_grp_len+1,5,5,5,5,5
+     6,max_grp_len+1,8,5,5,8,5,5,5,usize::MAX,
     ];
     assert!(lengths.len()==header.len());
     let output_string = align_output(&header, &lengths, &seperator[..]);
@@ -352,19 +377,23 @@ fn main() -> Result<(),String> {
         let mut row = vec![
             r.metric_name.clone(), 
             r.variable_groupings.clone(),
+            std::format!("{}/{}",r.numer_with,r.denom_with),
             std::format!("{:2.2}",r.metric_with),
             std::format!("{:2.2}",r.n_with),
         ];
         if r.n_without >0
         {
+            row.push(std::format!("{}/{}",r.numer_without,r.denom_without));
             row.push(std::format!("{:2.2}",r.metric_without));
             row.push(std::format!("{:2.2}",r.n_without));
             row.push(std::format!("{:2.2}",r.p_val));
         } else {
+            row.push(std::format!("{}/{}",r.numer_without,r.denom_without));
             row.push("-".to_string());
             row.push("0".to_string());
             row.push("-".to_string());
         }
+        row.push(r.comment);
         let output_string = align_output(&row, &lengths, &seperator[..]);
         writeln!(stdout(), "{}", output_string).unwrap_or(());
 
