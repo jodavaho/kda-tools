@@ -14,6 +14,17 @@ Then, you'll have to use the tools this package provides:
 -  `kda-compare` will run will look at the whole dataset and tell you if you're doing significantly differently with different loadouts.
 -  `kda-explore` will allow *you* to look at the conditional distributions *of anything* with and without *anything else*.
 
+# Get for debian / WSL
+
+For now, just grab one of the test debs in releases/  For example [1.3.0](https://github.com/jodavaho/kda-tools/blob/main/releases/kda-tools_1.3.0_amd64.deb)
+
+Then, in [wsl](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux), 
+
+```
+sudo dpkg -i kda-tools_1.3.0_amd64.deb
+```
+
+You can use the example above as-is. 
 
 # Basics
 
@@ -278,17 +289,7 @@ ARGS:
 
 One way to interpret this is "This doesn't make sense". That's true, it's primitive still, and mostly a toy for my own use.
 
-# Get for debian / WSL
 
-For now, just grab one of the test debs in releases/
-
-Then,
-
-```
-sudo dpkg -i kda-tools_0.5.0_amd64.deb
-```
-
-You can use the example above as-is. 
 
 # Todo
 
