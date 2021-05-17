@@ -39,7 +39,7 @@ For example, my Hunt diary looks a little like:
 2021-03-17 Short-Shotgun pistol-stock  alone
 ```
 
-you can use whatever you want to denote loadouts or friends ... it'll just run multi-variate regression on all of them with the important parts: `K D A or B`, for example...
+you can use whatever you want to denote loadouts or friends ... it'll just run multi-variate hypotheis tests on all of them with the important parts: `K D A or B`, for example...
 
 Contents of examples/journal.txt:
 
