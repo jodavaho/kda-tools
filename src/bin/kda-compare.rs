@@ -6,7 +6,7 @@ use kda_tools::by_pval;
 use pbr::{ProgressBar};
 use kda_tools::ResultRecord;
 use kda_tools::align_output;
-use poisson_rate_test::bootstrap::param::ratio_events_equal_pval_n;
+use poisson_rate_test::bootstrap::param::ratio_events_greater_pval_n;
 use clap::{App,Arg};
 use std::collections::{HashMap,HashSet};
 use std::io::{Write,stdin,stdout,BufRead};
@@ -261,7 +261,7 @@ fn main() -> Result<(),String> {
         };
         let (pvp_val_improved,pvp_comment) = match (ka_group,d_group) {
             (0,0) => (f64::NAN,"Metric is undefined"),
-            (_,0) => match ratio_events_equal_pval_n(
+            (_,0) => match ratio_events_greater_pval_n(
                     ka_non_group,
                     d_non_group,
                     n_non_group,
@@ -273,7 +273,7 @@ fn main() -> Result<(),String> {
                     Ok(p) => (p,"Infinite occurs in baseline, so it's a fair comparison"),
                     Err(_)=> (f64::NAN,"Could not compare, no baseline data?"),
                 }
-            (_,_) => match ratio_events_equal_pval_n(
+            (_,_) => match ratio_events_greater_pval_n(
                     ka_non_group,
                     d_non_group,
                     n_non_group,
@@ -288,7 +288,7 @@ fn main() -> Result<(),String> {
         };
         let (pve_val_improved,pve_comment) = match (b_group,d_group) {
             (0,0) => (f64::NAN,"Metric is undefined"),
-            (_,0) => match ratio_events_equal_pval_n(
+            (_,0) => match ratio_events_greater_pval_n(
                     b_non_group,
                     d_non_group,
                     n_non_group,
@@ -300,7 +300,7 @@ fn main() -> Result<(),String> {
                     Ok(p) => (p,"Infinite occurs in baseline, so it's a fair comparison"),
                     Err(_)=> (f64::NAN,"Could not process, no baseline data?"),
                 }
-            (_,_) => match ratio_events_equal_pval_n(
+            (_,_) => match ratio_events_greater_pval_n(
                     b_non_group,
                     d_non_group,
                     n_non_group,
