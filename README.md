@@ -73,7 +73,7 @@ $ <journal.txt kda-summary
     5 2021-01-04   1   1   0   1  1.00     7     3     0     2  2.33  1.40  0.60  0.00  0.40
 ```
 
-Not bad. Notice, `kda-summary` *requires* the use of tags `K` for kills, `D` for death, `B` for bounties, and `A` for assist. It outputs your per-match stats, the KDA value of `(K+A)/D`, the sum of the K, D, A and B, and the mean (avg / match) of KDA, K, D, A, and B.
+Not bad. Notice, `kda-summary` *requires* the use of tags `K` for kills, `D` for death, `B` for bounties, and `A` for assist. It outputs your per-match stats (K, D, A, B columns), the KDA value of `(K+A)/D` for that match, the running sum of the K, D, A and B, (the next 4 columns) and the mean (avg / match) of KDA, K, D, A, and B over time (the last 5 columns). You can stop here and pull this data into another program if you'd like.
 
 Note the `Date` field. If you put dates of the form `YYYY-MM-DD` somewhere per line in the journal, it will populate that field. See example above or [kvc](github.com/jodavaho/kvc.git). File bug reports *there* if you don't like how the dates are required to be formatted.
 
