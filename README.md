@@ -1,4 +1,4 @@
-These tools help you run [Alpha/Beta](https://en.wikipedia.org/wiki/A/B_testing) tests on your equipment choices for multiplayer competitive games. In particular, it is good for checking the [KDA](https://slangit.com/meaning/kda)
+These tools help you run [Alpha/Beta](https://en.wikipedia.org/wiki/A/B_testing) tests on your equipment choices for multiplayer competitive games. In particular, it is good for checking the [KDA](https://slangit.com/meaning/kda), both over time and when examining your performance for certain loadouts.
 
 # What?
 
