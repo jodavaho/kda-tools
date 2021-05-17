@@ -167,7 +167,7 @@ b/d    JP+Sniper   0/0      NaN    1    2/3      0.67   4    NaN
 Now we see that there isn't really a difference across friend / weapon
 pairings. Note the `inf` result. You may think that infinites are not possible
 to analyze. Well, since we're using bootstrap methods (see
-[poisson-rate-test](github.com/jodavaho/poisson-rate-test)), you can actually
+[poisson-rate-test](https://github.com/jodavaho/poisson-rate-test)), you can actually
 get meaningful probabilities, and therefore meaningful p-values.
 
 To confirm that friends are a nuisance variable (no statistically significant difference), try ignoring weapons:
