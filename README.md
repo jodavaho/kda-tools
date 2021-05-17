@@ -1,4 +1,4 @@
-This tool will correlate your equipment choices with your KDA spreads.
+These tools help you run [Alpha/Beta](https://en.wikipedia.org/wiki/A/B_testing) tests on your equipment choices for multiplayer competitive games. In particular, it is good for checking the [KDA](https://slangit.com/meaning/kda)
 
 # What?
 
@@ -11,7 +11,8 @@ To use it, you *will* have to write down match information. But matches last an 
 Then, you'll have to use the tools this package provides:
 
 -  `kda-summary` will summarize your K, D, and A values (and the usual KDA metric) over the entire journal.
--  `kda-compare` the alpha (unstable, unreliable) version of some multi-variate hyothesis tests that will tell you if you're doing significantly differently with different loadouts.
+-  `kda-compare` will run will look at the whole dataset and tell you if you're doing significantly differently with different loadouts.
+-  `kda-explore` will allow *you* to look at the conditional distributions *of anything* with and without *anything else*.
 
 
 # Basics
