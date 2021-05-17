@@ -103,7 +103,7 @@ These are
 -  value counts (n)
 -  deaths (d)
 - the value of the metric 'val' *with* the grp
--  # of matches where 'grp' was used (N)
+- number of matches where 'grp' was used (N)
 -  value counts *without* the grp (n)
 -  death counts *without* the grp (d)
 - the value of the metric 'val' *without* the grp
