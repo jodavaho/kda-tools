@@ -50,7 +50,21 @@ For example, my Hunt diary looks a little like:
 2021-03-17 Short-Shotgun pistol-stock  alone
 ```
 
-you can use whatever you want to denote loadouts or friends ... it'll just run multi-variate hypotheis tests on all of them with the important parts: `K D A or B`, for example...
+Whereas my usual wingman JP has one like:
+```
+2021-04-19 Martini-Henri_IC1 Caldwell_Conversion_Chain JV B B K
+2021-04-19 Martini-Henri_IC1_Deadeye Caldwell_Conversion_Chain JV JB
+2021-04-19 Martini-Henri_IC1_Deadeye Caldwell_Conversion_Chain JV JB B B
+2021-04-19 Vetterli_71_Karabiner Bornheim_No_3 JV JB B B
+2021-04-19 Vetterli_71_Karabiner Caldwell_Conversion JV JB D
+2021-05-02 Martini-Henri_IC1 Caldwell_Conversion_Chain JV JB A
+2021-05-02 Lebel_1886_Marksman Caldwell_Conversion_Chain JV JB K K
+2021-05-02 Lebel_1886_Marksman Caldwell_Conversion_Chain JV JB K K
+2021-05-02 Martini-Henri_IC1_Deadeye Caldwell_Conversion_Chain JV JB B B B B K K K
+```
+
+He's much better than I am. 
+You can use whatever you want to denote loadouts or friends ... it'll just run multi-variate hypotheis tests on all of them with the important parts: `K D A or B`, for example...
 
 Contents of examples/journal.txt:
 
