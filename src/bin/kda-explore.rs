@@ -101,7 +101,7 @@ fn main() -> Result<(),String> {
                 //don't bother verifying reserved keywords at this stage
                 "_"|"*"=>(),
                 _=>{
-                    assert!( idx_lookup.contains_key(item),std::format!("Variable '{}' not found in input data.",item) );
+                    assert!( idx_lookup.contains_key(item),"Variable not found in input data.");
                 },
             }
         }
@@ -111,7 +111,7 @@ fn main() -> Result<(),String> {
     //verify all output variables
     let metrics:Vec<String> = inout[0].split_whitespace().map(|x| x.to_string()).collect();
     for metric in metrics.iter(){
-        assert!( idx_lookup.contains_key(metric),std::format!("Requested output variable '{}' not found in input data.",metric));
+        assert!( idx_lookup.contains_key(metric),"Requested output variable not found in input data.");
     }
 
 
