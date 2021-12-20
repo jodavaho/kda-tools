@@ -16,7 +16,9 @@ Then, you'll have to use the tools this package provides:
 
 # Get for debian / WSL
 
-For now, just grab one of the test debs in releases/  For example [1.3.0](https://github.com/jodavaho/kda-tools/blob/main/releases/kda-tools_1.3.0_amd64.deb)
+If you have `cargo` (`apt install cargo`), then `cargo install jodavaho/kda-tools`. 
+
+Otherwise, just grab one of the test debs in releases/  For example [1.3.0](https://github.com/jodavaho/kda-tools/blob/main/releases/kda-tools_1.3.0_amd64.deb)
 
 Then, in [wsl](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux), 
 
