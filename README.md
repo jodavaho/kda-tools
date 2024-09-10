@@ -1,3 +1,5 @@
+[![justforfunnoreally.dev badge](https://img.shields.io/badge/justforfunnoreally-dev-9ff)](https://justforfunnoreally.dev)
+
 These tools help you run [Alpha/Beta](https://en.wikipedia.org/wiki/A/B_testing) tests on your equipment choices for multiplayer competitive games. In particular, it is good for checking the [KDA](https://slangit.com/meaning/kda), both over time and when examining your performance for certain loadouts.
 
 # What?
@@ -6,7 +8,7 @@ I play [hunt showdown](https://www.huntshowdown.com/) a lot. It's very fun. It's
 
 For that, I keep a journal of matches, and am writing this tool to output some insights on the data gathered.
 
-To use it, you *will* have to write down match information. But matches last an hour, so that's not much overhead. 
+To use it, you *will* have to write down match information. But matches last an hour, so that's not much overhead.
 
 Then, you'll have to use the tools this package provides:
 
@@ -18,13 +20,13 @@ Then, you'll have to use the tools this package provides:
 
 For now, just grab one of the test debs in releases/  For example [1.3.0](https://github.com/jodavaho/kda-tools/blob/main/releases/kda-tools_1.3.0_amd64.deb)
 
-Then, in [wsl](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux), 
+Then, in [wsl](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux),
 
 ```
 sudo dpkg -i kda-tools_1.3.0_amd64.deb
 ```
 
-You can use the example above as-is. 
+You can use the example above as-is.
 
 # Basics
 
@@ -63,7 +65,7 @@ Whereas my usual wingman JP has one like:
 2021-05-02 Martini-Henri_IC1_Deadeye Caldwell_Conversion_Chain JV JB B B B B K K K
 ```
 
-He's much better than I am. 
+He's much better than I am.
 You can use whatever you want to denote loadouts or friends ... it'll just run multi-variate hypotheis tests on all of them with the important parts: `K D A or B`, for example...
 
 Contents of examples/journal.txt:
@@ -110,7 +112,7 @@ So, what's the better loadout or partner?  KDA-compare does some testing for you
 $ <journal.txt kda-compare
 Processed. Read: 5 rows and 8 variables
 
-[====================================================] 100.00 % 2696.14/s 
+[====================================================] 100.00 % 2696.14/s
 met    grp      n/d      val   N     n/d      ~val  M     p
 kda    Sniper   5/1      5.00   3    2/2      1.00   2    0.06
 kda    JP       2/0      inf    1    5/3      1.67   4    0.49
@@ -123,7 +125,7 @@ b/d    JP       0/0      NaN    1    2/3      0.67   4    NaN
 ```
 
 Let's look. The first row is `met grp ...`
-These are 
+These are
 - the metric name (e.g., kda or bounties / death b/d)
 -  item group (grp)
 -  value counts (n)
@@ -134,27 +136,27 @@ These are
 -  death counts *without* the grp (d)
 - the value of the metric 'val' *without* the grp
 -  number of matches *without* the grp (M)
--  and the probability that we'd randomly see that 'val' given the distribution of the metric without the grp. 
+-  and the probability that we'd randomly see that 'val' given the distribution of the metric without the grp.
 
 You can see a pvp metric (kda or (kills + assists)/deaths ), and pve metric (bounties/death), for each item.
 
 That last one, p, is usually called a p-value, and if it's low, you have a
-signfiicantly *better* set of rounds with the grp than without it. 
+signfiicantly *better* set of rounds with the grp than without it.
 
-In the data above, it appears that rounds where I use the `Sniper` weapon are significantly better than rounds where I don't, given `p` is small. 
+In the data above, it appears that rounds where I use the `Sniper` weapon are significantly better than rounds where I don't, given `p` is small.
 
 Note, there are some `NaN`'s because when playing with JP I got no bounties or
 deaths (0/0), which is not a meaningful result to compare against. Less
 obviously, when playing with JB, I *also* cannot get a p-value, since in the
 rounds that I did *not* play with JB , I *never got a bounty*. This means
-there's no meaningful representation for the *baseline* (without JB) case. 
+there's no meaningful representation for the *baseline* (without JB) case.
 
 OK, so what? well, draw your own conclusions and try to mix up your loadouts.
 If you only play snipers wtih your friend JP, and only play shotguns with your
 friend JB, they will be highly correlated and it may be hard to see if JB or
-Shotgun makes the most difference. 
+Shotgun makes the most difference.
 
-There is an option `-i` to ignore certain items. This is useful if you want to see the weapons only. 
+There is an option `-i` to ignore certain items. This is useful if you want to see the weapons only.
 
 let's ignore my wingmen JP and JB to check just weapons.
 
@@ -162,7 +164,7 @@ let's ignore my wingmen JP and JB to check just weapons.
 $ <journal.txt kda-compare -i JP JB
 Processed. Read: 5 rows and 8 variables
 
-[====================================================] 100.00 % 3450.51/s 
+[====================================================] 100.00 % 3450.51/s
 met    grp      n/d      val   N     n/d      ~val  M     p
 kda    Sniper   5/1      5.00   3    2/2      1.00   2    0.08
 kda    Shotgun  2/2      1.00   2    5/1      5.00   3    0.77
@@ -170,7 +172,7 @@ b/d    Sniper   1/1      1.00   3    1/2      0.50   2    0.24
 b/d    Shotgun  1/2      0.50   2    1/1      1.00   3    0.69
 ```
 
-Now we see a slight decrease in Sniper for kda, but no change in b/d. 
+Now we see a slight decrease in Sniper for kda, but no change in b/d.
 
 You can also test pairings (group-size = 2)
 
@@ -179,7 +181,7 @@ You can also test pairings (group-size = 2)
 $ <journal.txt kda-compare --group-size 2
 Processed. Read: 5 rows and 8 variables
 
-[==================================================] 100.00 % 8175.42/s 
+[==================================================] 100.00 % 8175.42/s
 met    grp         n/d      val   N     n/d      ~val  M     p
 kda    JP+Sniper   2/0      inf    1    5/3      1.67   4    0.47
 kda    JB+Sniper   1/1      1.00   1    6/2      3.00   4    0.78
@@ -201,7 +203,7 @@ To confirm that friends are a nuisance variable (no statistically significant di
 $ <journal.txt kda-compare -i Sniper Shotgun
 Processed. Read: 5 rows and 8 variables
 
-[====================================================] 100.00 % 3948.08/s 
+[====================================================] 100.00 % 3948.08/s
 met    grp n/d      val   N     n/d      ~val  M     p
 kda    JP  2/0      inf    1    5/3      1.67   4    0.49
 kda    JB  2/2      1.00   2    5/1      5.00   3    0.77
@@ -240,7 +242,7 @@ OPTIONS:
                                      [default: wsv]  [possible values: wsv, tsv, csv, vnl]
 ```
 
-# Manual: KDA-Explore 
+# Manual: KDA-Explore
 
 To really dig in, you can evaluate the conditional distribtuions of any variable conditioned on the occurance of any other variable. This is the role of `kda-explore`.
 
@@ -248,12 +250,12 @@ What I mean is that `kda-explore` the semantics of 'K' vs 'k' vs "kill" is
 irrelevant. We explore the data by asking it to analyze variables by name. For
 example, in the data above, to see kills "K" per match with Sniper and without,
 you form the "experiment" denoted as "K:Sniper" and ask `kda-explore` to run
-that experiment by `kda-explore "K : Sniper"`. 
+that experiment by `kda-explore "K : Sniper"`.
 
 ```bash
 $ < journal.txt kda-explore K:Sniper
 Processed. Read: 5 rows and 8 variables
-Varibables found: Date Sniper K D Shotgun JP B JB 
+Varibables found: Date Sniper K D Shotgun JP B JB
 Debug: processing: K:Sniper
 met    grp     n     M     rate  ~n    ~M    ~rate p     notes
 K      Sniper  5     3     1.67  2     2     1.00  0.37
@@ -265,7 +267,7 @@ This means the probability of a kill given you have a sniper is higher, but not 
 $ < journal.txt kda-explore D:Sniper
 Processed. Read: 5 rows and 8 variables
 Varibables found:
-Date Sniper K Shotgun D JP B JB 
+Date Sniper K Shotgun D JP B JB
 Debug: processing: D:Sniper
 met    grp     n     M     rate  ~n    ~M    ~rate p     notes
 D      Sniper  1     3     0.33  2     2     1.00  0.19
@@ -311,12 +313,13 @@ One way to interpret this is "This doesn't make sense". That's true, it's primit
 - [x] improve match journal to allow :count. (see kvc again)
 - [ ] provide linter for match journal
 - [x] tool to create / factor matricies in format ammenable to third-party analysis (e.g., R)
-- [ ] Perform power tests / experiment design 
+- [ ] Perform power tests / experiment design
 - [x] remove '-c' as mandatory switch ... obsolete when baseline '\_' was removed
-- [ ] Provide a library version in C, 
-  - [ ] C++, 
+- [ ] Provide a library version in C,
+  - [ ] C++,
   - [x] Rust
 
 # Known issues
 
 - If you have an item you use every game, then you have insufficient data. for every test of the form `k:A` there *must* be at least one match *without* A occuring. It's ok if there's no kills (`k`).
+
